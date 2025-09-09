@@ -1,0 +1,6 @@
+# Build output
+bin/
+obj/
+# app settings (local secrets)
+appsettings.json
+appsettings.Development.json
