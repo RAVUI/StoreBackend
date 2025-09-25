@@ -8,15 +8,14 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.1" />
+		<PackageReference Include="MongoDB.Bson" Version="3.5.0" />
+		<PackageReference Include="MongoDB.Driver" Version="3.5.0" />
+		<PackageReference Include="MongoDB.Entities" Version="24.1.1" />
 		<PackageReference Include="Supabase" Version="1.1.1" />
 		<PackageReference Include="Supabase.Gotrue" Version="6.0.3" />
 		<PackageReference Include="Supabase.Postgrest" Version="4.1.0" />
 		<PackageReference Include="Supabase.Realtime" Version="7.2.0" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Services\" />
 	</ItemGroup>
 
 </Project>
