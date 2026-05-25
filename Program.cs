@@ -63,6 +63,13 @@ builder.Services.AddSwaggerGen(c =>
 
 });
 
+var jwtSecret = builder.Configuration["Supabase:JwtSecret"];
+
+if (string.IsNullOrEmpty(jwtSecret))
+{
+    throw new Exception("Supabase JwtSecret is missing");
+}
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -79,7 +86,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Supabase:JwtSecret"]))
+            Encoding.UTF8.GetBytes(jwtSecret))
     };
 
     options.Events = new JwtBearerEvents
