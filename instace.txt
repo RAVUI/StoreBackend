@@ -1,0 +1,899 @@
+1.General Purpose ( g – series ): 
+
+-g9ae general-purpose instance family
+ecs.g9ae.large
+ecs.g9ae.xlarge
+ecs.g9ae.2xlarge
+ecs.g9ae.4xlarge
+ecs.g9ae.8xlarge
+ecs.g9ae.12xlarge
+ecs.g9ae.16xlarge
+ecs.g9ae.24xlarge
+ecs.g9ae.32xlarge
+ecs.g9ae.48xlarge
+
+-g9a general-purpose instance family
+ecs.g9a.large
+ecs.g9a.xlarge
+ecs.g9a.2xlarge
+ecs.g9a.4xlarge
+ecs.g9a.8xlarge
+ecs.g9a.16xlarge
+ecs.g9a.24xlarge
+ecs.g9a.32xlarge
+ecs.g9a.48xlarge
+
+-g9i general-purpose instance family
+ecs.g9i.large
+ecs.g9i.xlarge
+ecs.g9i.2xlarge
+ecs.g9i.3xlarge
+ecs.g9i.4xlarge
+ecs.g9i.6xlarge
+ecs.g9i.8xlarge
+ecs.g9i.12xlarge
+ecs.g9i.16xlarge
+ecs.g9i.24xlarge
+ecs.g9i.32xlarge
+ecs.g9i.48xlarge
+
+-g8a general-purpose instance family
+ecs.g8a.large
+ecs.g8a.xlarge
+ecs.g8a.2xlarge
+ecs.g8a.4xlarge
+ecs.g8a.8xlarge
+ecs.g8a.12xlarge
+ecs.g8a.16xlarge
+ecs.g8a.24xlarge
+ecs.g8a.32xlarge
+ecs.g8a.48xlarge
+
+-g8ae performance-enhanced general-purpose instance family
+ecs.g8ae.large
+ecs.g8ae.xlarge
+ecs.g8ae.2xlarge
+ecs.g8ae.4xlarge
+ecs.g8ae.8xlarge
+ecs.g8ae.16xlarge
+ecs.g8ae.32xlarge
+
+-g8i general-purpose instance family
+ecs.g8i.large
+ecs.g8i.xlarge
+ecs.g8i.2xlarge
+ecs.g8i.3xlarge
+ecs.g8i.4xlarge
+ecs.g8i.6xlarge
+ecs.g8i.8xlarge
+ecs.g8i.12xlarge
+ecs.g8i.16xlarge
+ecs.g8i.24xlarge
+ecs.g8i.48xlarge
+
+-g8ine network-enhanced general-purpose instance family
+ecs.g8ine.large
+ecs.g8ine.xlarge
+ecs.g8ine.2xlarge
+ecs.g8ine.4xlarge
+ecs.g8ine.8xlarge
+
+-g8y, general-purpose instance family
+ecs.g8y.small
+ecs.g8y.large
+ecs.g8y.xlarge
+ecs.g8y.2xlarge
+ecs.g8y.4xlarge
+ecs.g8y.8xlarge
+ecs.g8y.16xlarge
+ecs.g8y.32xlarge
+
+-g7a general-purpose instance family
+ecs.g7a.large
+ecs.g7a.xlarge
+ecs.g7a.2xlarge
+ecs.g7a.4xlarge
+ecs.g7a.8xlarge
+ecs.g7a.16xlarge
+ecs.g7a-nps1.16xlarge
+ecs.g7a.32xlarge
+
+-g7, general-purpose instance family
+ecs.g7.large
+ecs.g7.xlarge
+ecs.g7.2xlarge
+ecs.g7.3xlarge
+ecs.g7.4xlarge
+ecs.g7.6xlarge
+ecs.g7.8xlarge
+ecs.g7.16xlarge
+ecs.g7.32xlarge
+
+-g6r general-purpose instance family
+ecs.g6r.large
+ecs.g6r.xlarge
+ecs.g6r.2xlarge
+ecs.g6r.4xlarge
+ecs.g6r.8xlarge
+ecs.g6r.16xlarge
+
+-g6a general-purpose instance family
+ecs.g6a.large
+ecs.g6a.xlarge
+ecs.g6a.2xlarge
+ecs.g6a.4xlarge
+ecs.g6a.8xlarge
+ecs.g6a.16xlarge
+ecs.g6a.32xlarge
+
+-g6e performance-enhanced general-purpose instance family
+ecs.g6e.large
+ecs.g6e.xlarge
+ecs.g6e.2xlarge
+ecs.g6e.4xlarge
+ecs.g6e.8xlarge
+ecs.g6e.13xlarge
+ecs.g6e.26xlarge
+
+-g6 general-purpose instance family
+ecs.g6.large
+ecs.g6.xlarge
+ecs.g6.2xlarge
+ecs.g6.3xlarge
+ecs.g6.4xlarge
+ecs.g6.6xlarge
+ecs.g6.8xlarge
+ecs.g6.13xlarge
+ecs.g6.26xlarge
+
+-g5 general-purpose instance family
+ecs.g5.large
+ecs.g5.xlarge
+ecs.g5.2xlarge
+ecs.g5.3xlarge
+ecs.g5.4xlarge
+ecs.g5.6xlarge
+ecs.g5.8xlarge
+ecs.g5.16xlarge
+
+-sn2ne network-enhanced general-purpose instance family
+ecs.sn2ne.large
+ecs.sn2ne.xlarge
+ecs.sn2ne.2xlarge
+ecs.sn2ne.3xlarge
+ecs.sn2ne.4xlarge
+ecs.sn2ne.6xlarge
+ecs.sn2ne.8xlarge
+ecs.sn2ne.14xlarge
+
+
+2.Compute-optimized instance families (c series):
+
+-c9ae, compute-optimized instance family
+ecs.c9ae.large
+ecs.c9ae.xlarge
+ecs.c9ae.2xlarge
+cs.c9ae.4xlarge
+ecs.c9ae.8xlarge
+ecs.c9ae. 12xlarge
+ecs.c9ae. 16xlarge
+ecs.c9ae.24xlarge
+ecs.c9ae.32xlarge
+ecs.c9ae.48xlarge
+
+-c9a, compute-optimized instance family
+ecs.c9a.large
+ecs.c9a.xlarge
+ecs.c9a.2xlarge
+ecs.c9a.4xlarge
+ecs.c9a.8xlarge
+ecs.c9a. 16xlarge
+
+-c9i, compute-optimized instance family
+ecs.c9i.large
+ecs.c9i.xlarge
+ecs.c9i.2xlarge
+ecs.c9i.3xlarge
+ecs.c9i.4xlarge
+ecs.c9i.6xlarge
+ecs.c9i.8xlarge
+ecs.c9i.12xlarge
+ecs.c9i. 16xlarge
+ecs.c9i.24xlarge
+ecs.c9i.32xlarge
+ecs.c9i.48xlarge
+
+-c8a, compute-optimized instance family
+ecs.c8a.large
+ecs.c8a.xlarge
+ecs.c8a.2xlarge
+ecs.c8a.4xlarge
+ecs.c8a.8xlarge
+ecs.c8a.12xlarge
+ecs.c8a. 16xlarge
+ecs.c8a.24xlarge
+ecs.c8a.32xlarge
+ecs.c8a.48xlarge
+
+-c8ae, performance-enhanced compute-optimized instance family
+ecs.c8ae.large
+cs.c8ae.xlarge
+ecs.c8ae.2xlarge
+ecs.c8ae.4xlarge
+ecs.c8ae.8xlarge
+ecs.c8ae. 16xlarge
+ecs.c8ae.32xlarge
+
+-c8i, compute-optimized instance family
+ecs.c8i.large
+ecs.c8i.xlarge
+ecs.c8i.2xlarge
+ecs.c8i.3xlarge
+ecs.c8i.4xlarge
+ecs.c8i.6xlarge
+ecs.c8i.8xlarge
+ecs.c8i.12xlarge
+ecs.c8i.16xlarge
+ecs.c8i.24xlarge
+ecs.c8i.48xlarge
+
+-c8ine, network-enhanced compute-optimized instance family
+ecs.c8ine.large
+ecs.c8ine.xlarge
+ecs.c8ine.2xlarge
+ecs.c8ine.4xlarge
+ecs.c8ine.8xlarge
+
+-c8y, compute-optimized instance family
+ecs.c8y.small
+ecs.c8y.large
+ecs.c8y.xlarge
+ecs.c8y.2xlarge
+ecs.c8y.4xlarge
+ecs.c8y.8xlarge
+ecs.c8y.16xlarge
+ecs.c8y.32xlarge
+
+-c7a, compute-optimized instance family
+ecs.c7a.large
+ecs.c7a.xlarge
+ecs.c7a.2xlarge
+ecs.c7a.4xlarge
+ecs.c7a.8xlarge
+ecs.c7a-
+nps1.8xlarge
+ecs.c7a. 16xlarge
+ecs.c7a-nps1.16xlarge
+ecs.c7a.32xlarge
+
+-c7, compute-optimized instance family
+ecs.c7.large
+ecs.c7.xlarge
+ecs.c7.2xlarge
+ecs.c7.3xlarge
+ecs.c7.4xlarge
+ecs.c7.6xlarge
+ecs.c7.8xlarge
+ecs.c7.16xlarge
+ecs.c7.32xlarge
+
+-c6r, compute-optimized instance family
+ecs.c6r.large
+ecs.c6r.xlarge
+ecs.c6r.2xlarge
+ecs.c6r.4xlarge
+ecs.c6r.8xlarge
+ecs.c6r.16xlarge
+
+-c6a, compute-optimized instance family
+ecs.c6a.large
+ecs.c6a.xlarge
+ecs.c6a.2xlarge
+ecs.c6a.4xlarge
+ecs.c6a.8xlarge
+ecs.c6a. 16xlarge
+ecs.c6a.32xlarge
+
+-c6e, performance-enhanced compute-optimized instance family
+ecs.c6e.large
+ecs.c6e.xlarge
+ecs.c6e.2xlarge
+ecs.c6e.4xlarge
+ecs.c6e.8xlarge
+ecs.c6e.13xlarge
+ecs.c6e.26xlarge
+
+-c6, compute-optimized instance family
+ecs.c6.large
+ecs.c6.xlarge
+ecs.c6.2xlarge
+ecs.c6.3xlarge
+ecs.c6.4xlarge
+ecs.c6.6xlarge
+ecs.c6.8xlarge
+ecs.c6.13xlarge
+ecs.c6.26xlarge
+
+-c5, compute-optimized instance family
+ecs.c5.large
+ecs.c5.xlarge
+ecs.c5.2xlarge
+ecs.c5.3xlarge
+ecs.c5.4xlarge
+ecs.c5.6xlarge
+ecs.c5.8xlarge
+ecs.c5.16xlarge
+
+-ic5, compute-intensive instance family
+ecs.ic5.large
+ecs.ic5.xlarge
+ecs.ic5.2xlarge
+ecs.ic5.3xlarge
+ecs.ic5.4xlarge
+ecs.ic5.6xlarge
+ecs.ic5.8xlarge
+ecs.ic5.16xlarge
+
+-sn1ne, network-enhanced compute-optimized instance family
+ecs.sn1ne.large
+ecs.sn1ne.xlarge
+ecs.sn1ne.2xlarge
+ecs.sn1ne.3xlarge
+ecs.sn1ne.4xlarge
+ecs.sn1ne.6xlarge
+ecs.sn1ne.8xlarge
+
+
+
+3.Memory-optimized instance families (r series):
+
+
+-r9ae, memory-optimized instance family
+ecs.r9ae.large
+ecs.r9ae.xlarge
+ecs.r9ae.2xlarge
+ecs.r9ae.4xlarge
+ecs.r9ae.8xlarge
+ecs.r9ae. 12xlarge
+ecs.r9ae. 16xlarge
+ecs.r9ae.24xlarge
+ecs.r9ae.32xlarge
+ecs.r9ae.48xlarge
+
+-r9a, memory-optimized instance family
+ecs.r9a.large
+ecs.r9a.xlarge
+ecs.r9a.2xlarge
+ecs.r9a.4xlarge
+ecs.r9a.8xlarge
+
+-r9i, memory-optimized instance family
+ecs.r9i.large
+ecs.r9i.xlarge
+ecs.r9i.2xlarge
+ecs.r9i.3xlarge
+ecs.r9i.4xlarge
+ecs.r9i.6xlarge
+ecs.r9i.8xlarge
+ecs.r9i.12xlarge
+ecs.r9i.16xlarge
+ecs.r9i.24xlarge
+ecs.r9i.32xlarge
+ecs.r9i.48xlarge
+
+
+-r8a, memory-optimized instance family
+ecs.r8a.large
+ecs.r8a.xlarge
+ecs.r8a.2xlarge
+ecs.r8a.4xlarge
+ecs.r8a.8xlarge
+ecs.r8a.12xlarge
+ecs.r8a.16xlarge
+ecs.r8a.24xlarge
+ecs.r8a.32xlarge
+ecs.r8a.48xlarge
+
+
+-r8i, memory-optimized instance family
+ecs.r8i.large
+ecs.r8i.xlarge
+ecs.r8i.2xlarge
+ecs.r8i.3xlarge
+ecs.r8i.4xlarge
+ecs.r8i.6xlarge
+ecs.r8i.8xlarge
+ecs.r8i.12xlarge
+ecs.r8i. 16xlarge
+ecs.r8i.32xlarge
+
+-r8ae, enhanced-performance memory-optimized instance family
+ecs.r8ae.large
+ecs.r8ae.xlarge
+ecs.r8ae.2xlarge
+ecs.r8ae.4xlarge
+ecs.r8ae.8xlarge
+
+-r8y, memory-optimized instance family
+ecs.r8y.small
+ecs.r8y.large
+ecs.r8y.xlarge
+ecs.r8y.2xlarge
+ecs.r8y.4xlarge
+ecs.r8y.8xlarge
+ecs.r8y. 16xlarge
+ecs.r8y.32xlarge
+
+
+-r7a, memory-optimized instance family
+ecs.r7a.large
+ecs.r7a.xlarge
+ecs.r7a.2xlarge
+ecs.r7a.4xlarge
+ecs.r7a.8xlarge
+ecs.r7a-nps1.8xlarge
+ecs.r7a.16xlarge
+ecs.r7a-nps1.16xlarge
+ecs.r7a.32xlarge
+
+-r7, memory-optimized instance family
+ecs.r7.large
+ecs.r7.xlarge
+ecs.r7.2xlarge
+ecs.r7.3xlarge
+ecs.r7.4xlarge
+ecs.r7.6xlarge
+ecs.r7.8xlarge
+ecs.r7.16xlarge
+ecs.r7.32xlarge
+
+-r6a, memory-optimized instance family
+ecs.r6a.large
+ecs.r6a.xlarge
+ecs.r6a.2xlarge
+ecs.r6a.4xlarge
+ecs.r6a.8xlarge
+ecs.r6a. 16xlarge
+
+-r6e, enhanced-performance memory-optimized instance family
+ecs.r6e.large
+ecs.r6e.xlarge
+ecs.r6e.2xlarge
+ecs.r6e.4xlarge
+ecs.r6e.8xlarge
+ecs.r6e. 13xlarge
+ecs.r6e.26xlarge
+
+-r6, memory-optimized instance family
+ecs.r6.large
+ecs.r6.xlarge
+ecs.r6.2xlarge
+ecs.r6.3xlarge
+ecs.r6.4xlarge
+ecs.r6.6xlarge
+ecs.r6.8xlarge
+ecs.r6.13xlarge
+ecs.r6.26xlarge
+
+-r5, memory-optimized instance family
+ecs.r5.large
+ecs.r5.xlarge
+ecs.r5.2xlarge
+ecs.r5.3xlarge
+ecs.r5.4xlarge
+ecs.r5.6xlarge
+ecs.r5.8xlarge
+ecs.r5.16xlarge
+
+-se1ne, network-enhanced memory-optimized instance family
+ecs.se1ne.large
+ecs.se1ne.xlarge
+ecs.se1ne.2xlarge
+ecs.se1ne.3xlarge
+ecs.se1ne.4xlarge
+ecs.se1ne.6xlarge
+ecs.se1ne.8xlarge
+ecs.se1ne.14xlarge
+
+-se1, memory-optimized instance family
+ecs.se1.large
+ecs.se1.xlarge
+ecs.se1.2xlarge
+ecs.se1.4xlarge
+ecs.se1.8xlarge
+ecs.se1.14xlarge
+
+
+4.General-purpose instance types (U instances):
+
+
+-u2a, universal instance family
+ecs.u2a-c1m1.large
+ecs.u2a-c1m2.large
+ecs.u2a-c1m4.large
+ecs.u2a-c1m1.xlarge
+ecs.u2a-c1m2.xlarge
+ecs.u2a-c1m4.xlarge
+ecs.u2a-c1m2.2xlarge
+ecs.u2a-c1m4.2xlarge
+ecs.u2a-c1m2.4xlarge
+ecs.u2a-c1m4.4xlarge
+ecs.u2a-c1m2.6xlarge
+ecs.u2a-c1m4.6xlarge
+ecs.u2a-c1m2.8xlarge
+ecs.u2a-c1m4.8xlarge
+ecs.u2a-c1m2.12xlarge
+ecs.u2a-c1m4.12xlarge
+ecs.u2a-c1m2.16xlarge
+ecs.u2a-c1m4.16xlarge
+
+-u2i, universal instance family
+ecs.u2i-c1m1.large
+ecs.u2i-c1m1.xlarge
+ecs.u2i-c1m1.2xlarge
+ecs.u2i-c1m1.3xlarge
+ecs.u2i-c1m1.4xlarge
+ecs.u2i-c1m1.6xlarge
+ecs.u2i-c1m1.8xlarge
+ecs.u2i-c1m2.large
+ecs.u2i-c1m2.xlarge
+ecs.u2i-c1m2.2xlarge
+ecs.u2i-c1m2.3xlarge
+ecs.u2i-c1m2.4xlarge
+ecs.u2i-c1m2.6xlarge
+ecs.u2i-c1m2.8xlarge
+ecs.u2i-c1m4.large
+ecs.u2i-c1m4.xlarge
+ecs.u2i-c1m4.2xlarge
+ecs.u2i-c1m4.3xlarge
+ecs.u2i-c1m4.4xlarge
+ecs.u2i-c1m4.6xlarge
+ecs.u2i-c1m4.8xlarge
+ecs.u2i-c1m8.large
+ecs.u2i-c1m8.xlarge
+ecs.u2i-c1m8.2xlarge
+ecs.u2i-c1m8.3xlarge
+ecs.u2i-c1m8.4xlarge
+ecs.u2i-c1m8.6xlarge
+ecs.u2i-c1m8.8xlarge
+
+-u1, universal instance family
+ecs.u1-c1m1.large
+ecs.u1-c1m2.large
+ecs.u1-c1m4.large
+ecs.u1-c1m8.large
+ecs.u1-c1m1.xlarge
+ecs.u1-c1m2.xlarge
+ecs.u1-c1m4.xlarge
+ecs.u1-c1m8.xlarge
+ecs.u1-c1m1.2xlarge
+ecs.u1-c1m2.2xlarge
+ecs.u1-c1m4.2xlarge
+ecs.u1-c1m8.2xlarge
+ecs.u1-c1m1.3xlarge
+ecs.u1-c1m2.3xlarge
+ecs.u1-c1m4.3xlarge
+ecs.u1-c1m8.3xlarge
+ecs.u1-c1m1.4xlarge
+ecs.u1-c1m2.4xlarge
+ecs.u1-c1m4.4xlarge
+ecs.u1-c1m8.4xlarge
+ecs.u1-c1m1.8xlarge
+ecs.u1-c1m2.8xlarge
+ecs.u1-c1m4.8xlarge
+ecs.u1-c1m8.8xlarge
+
+
+
+
+5.Big data instance types
+
+
+-d3s, storage-intensive big data instance family
+ecs.d3s.2xlarge
+ecs.d3s.4xlarge
+ecs.d3s.8xlarge
+ecs.d3s.12xlarge
+ecs.d3s. 16xlarge
+
+
+-d3c, compute-intensive big data instance family
+ecs.d3c.3xlarge
+ecs.d3c.7xlarge
+ecs.d3c.14xlarge
+
+
+-d2c, compute-intensive big data instance family
+ecs.d2c.6xlarge
+ecs.d2c.12xlarge
+ecs.d2c.24xlarge
+
+
+-d2s, storage-intensive big data instance family
+ecs.d2s.5xlarge
+ecs.d2s.10xlarge
+ecs.d2s.20xlarge
+
+
+-d1ne, network-enhanced big data instance family
+ecs.d1ne.2xlarge
+ecs.d1ne.4xlarge
+ecs.d1ne.6xlarge
+ecs.d1ne-
+c8d3.8xlarge
+ecs.d1ne.8xlarge
+ecs.d1ne-
+c14d3.14xlarge
+ecs.d1ne.14xlarge
+
+
+6.Instance families with local SSDs (i series)
+
+-i5g, instance family with local SSDs
+ecs.i5g.8xlarge
+ecs.i5g.16xlarge
+
+-i5ge, instance family with local SSDs
+ecs.i5ge.3xlarge
+ecs.i5ge.6xlarge
+ecs.i5ge. 12xlarge
+ecs.i5ge.24xlarge
+
+-i5e, instance family with local SSDs
+ecs.i5e.2xlarge
+ecs.i5e.4xlarge
+ecs.i5e.8xlarge
+ecs.i5e.12xlarge
+ecs.i5e.16xlarge
+ecs.i5e.32xlarge
+
+-i5, instance family with local SSDs
+ecs.i5.xlarge
+ecs.i5.2xlarge
+ecs.i5.4xlarge
+ecs.i5.8xlarge
+ecs.i5.12xlarge
+ecs.i5.16xlarge
+
+-i4, instance family with local SSDs
+ecs.i4.large
+ecs.i4.xlarge
+ecs.i4.2xlarge
+ecs.i4.4xlarge
+ecs.i4.8xlarge
+ecs.i4.16xlarge
+ecs.i4.32xlarge
+
+-i4g, instance family with local SSDs
+ecs.i4g.4xlarge
+ecs.i4g.8xlarge
+ecs.i4g.16xlarge
+ecs.i4g.32xlarge
+
+-i4r, instance family with local SSDs
+ecs.i4r.4xlarge
+ecs.i4r.8xlarge
+ecs.i4r.16xlarge
+ecs.i4r.32xlarge
+
+-i4p, performance-enhanced instance family with local SSDs
+ecs.i4p.2xlarge
+ecs.i4p.4xlarge
+ecs.i4p.6xlarge
+ecs.i4p.8xlarge
+ecs.i4p.16xlarge
+ecs.i4p.32xlarge
+
+-i3g, instance family with local SSDs
+ecs.i3g.2xlarge
+ecs.i3g.4xlarge
+ecs.i3g.8xlarge
+ecs.i3g.13xlarge
+ecs.i3g.26xlarge
+
+-i3, instance family with local SSDs
+ecs.i3.xlarge
+ecs.i3.2xlarge
+ecs.i3.4xlarge
+ecs.13.8xlarge
+ecs.i3.13xlarge
+ecs.i3.26xlarge
+
+-i2, instance family with local SSDs
+ecs.i2.xlarge
+ecs.i2.2xlarge
+ecs.i2.4xlarge
+ecs.i2.8xlarge
+ecs.i2.16xlarge
+
+-i2g, instance family with local SSDs
+ecs.i2g.2xlarge
+ecs.i2g.4xlarge
+ecs.i2g.8xlarge
+ecs.i2g.16xlarge
+
+-i2ne, instance family with local SSDs
+ecs.i2ne.xlarge
+ecs.i2ne.2xlarge
+ecs.i2ne.4xlarge
+ecs.i2ne.8xlarge
+ecs.i2ne. 16xlarge
+ecs.i2ne.20xlarge
+
+-i2gne, instance family with local SSDs
+ecs.i2gne.2xlarge
+ecs.i2gne.4xlarge
+ecs.i2gne.8xlarge
+ecs.i2gne.16xlarge
+
+
+
+7.Instance families with high clock speeds (hf series):
+
+
+-hfc9i, compute-optimized instance family with high clock speeds
+ecs.hfc9i.large
+ecs.hfc9i.xlarge
+ecs.hfc9i.2xlarge
+ecs.hfc9i.3xlarge
+ecs.hfc9i.4xlarge
+ecs.hfc9i.6xlarge
+ecs.hfc9i.8xlarge
+ecs.hfc9i.12xlarge
+ecs.hfc9i. 16xlarge
+ecs.hfc9i.24xlarge
+ecs.hfc9i.36xlarge
+
+
+-hfg9i, general-purpose instance family with high clock speeds
+ecs.hfg9i.large
+ecs.hfg9i.xlarge
+ecs.hfg9i.2xlarge
+ecs.hfg9i.3xlarge
+ecs.hfg9i.4xlarge
+ecs.hfg9i.6xlarge
+ecs.hfg9i.8xlarge
+ecs.hfg9i.12xlarge
+ecs.hfg9i.16xlarge
+ecs.hfg9i.24xlarge
+ecs.hfg9i.36xlarge
+
+
+-hfr9i, memory-optimized instance family with high clock speeds
+ecs.hfr9i.large
+ecs.hfr9i.xlarge
+ecs.hfr9i.2xlarge
+ecs.hfr9i.3xlarge
+ecs.hfr9i.4xlarge
+ecs.hfr9i.6xlarge
+ecs.hfr9i.8xlarge
+ecs.hfr9i. 12xlarge
+ecs.hfr9i. 16xlarge
+ecs.hfr9i.24xlarge
+ecs.hfr9i.36xlarge
+
+
+-hfc8i, compute-optimized instance family with high clock speeds
+ecs.hfc8i.large
+ecs.hfc8i.xlarge
+ecs.hfc8i.2xlarge
+ecs.hfc8i.3xlarge
+ecs.hfc8i.4xlarge
+ecs.hfc8i.6xlarge
+ecs.hfc8i.8xlarge
+ecs.hfc8i.16xlarge
+ecs.hfc8i.32xlarge
+
+-hfg8i, general-purpose instance family with high clock speeds
+ecs.hfg8i.large
+ecs.hfg8i.xlarge
+ecs.hfg8i.2xlarge
+ecs.hfg8i.3xlarge
+ecs.hfg8i.4xlarge
+ecs.hfg8i.6xlarge
+ecs.hfg8i.8xlarge
+ecs.hfg8i. 16xlarge
+ecs.hfg8i.32xlarge
+
+-hfr8i, memory-optimized instance family with high clock speeds
+ecs.hfr8i.large
+ecs.hfr8i.xlarge
+ecs.hfr8i.2xlarge
+ecs.hfr8i.3xlarge
+ecs.hfr8i.4xlarge
+ecs.hfr8i.6xlarge
+ecs.hfr8i.8xlarge
+ecs.hfr8i. 16xlarge
+ecs.hfr8i.32xlarge
+
+-hfc7, compute-optimized instance family with high clock speeds
+ecs.hfc7.large
+ecs.hfc7.xlarge
+ecs.hfc7.2xlarge
+ecs.hfc7.3xlarge
+ecs.hfc7.4xlarge
+ecs.hfc7.6xlarge
+ecs.hfc7.8xlarge
+ecs.hfc7.12xlarge
+ecs.hfc7.24xlarge
+
+-hfg7, general-purpose instance family with high clock speeds
+ecs.hfg7.large
+ecs.hfg7.xlarge
+ecs.hfg7.2xlarge
+ecs.hfg7.3xlarge
+ecs.hfg7.4xlarge
+ecs.hfg7.6xlarge
+ecs.hfg7.8xlarge
+ecs.hfg7.12xlarge
+ecs.hfg7.24xlarge
+
+
+-hfr7, memory-optimized instance family with high clock speeds
+ecs.hfr7.large
+ecs.hfr7.xlarge
+ecs.hfr7.2xlarge
+ecs.hfr7.3xlarge
+ecs.hfr7.4xlarge
+ecs.hfr7.6xlarge
+ecs.hfr7.8xlarge
+ecs.hfr7.12xlarge
+ecs.hfr7.24xlarge
+
+-hfc6, compute-optimized instance family with high clock speeds
+ecs.hfc6.large
+ecs.hfc6.xlarge
+ecs.hfc6.2xlarge
+ecs.hfc6.3xlarge
+ecs.hfc6.4xlarge
+ecs.hfc6.6xlarge
+ecs.hfc6.8xlarge
+ecs.hfc6.10xlarge
+ecs.hfc6.16xlarge
+ecs.hfc6.20xlarge
+
+
+-hfg6, general-purpose instance family with high clock speeds
+ecs.hfg6.large
+ecs.hfg6.xlarge
+ecs.hfg6.2xlarge
+ecs.hfg6.3xlarge
+ecs.hfg6.4xlarge
+ecs.hfg6.6xlarge
+ecs.hfg6.8xlarge
+ecs.hfg6.10xlarge
+ecs.hfg6.16xlarge
+ecs.hfg6.20xlarge
+
+-hfr6, memory-optimized instance family with high clock speeds
+ecs.hfr6.large
+ecs.hfr6.xlarge
+ecs.hfr6.2xlarge
+ecs.hfr6.3xlarge
+ecs.hfr6.4xlarge
+ecs.hfr6.6xlarge
+ecs.hfr6.8xlarge
+ecs.hfr6.10xlarge
+ecs.hfr6.16xlarge
+ecs.hfr6.20xlarge
+
+-hfc5, compute-optimized instance family with high clock speeds
+ecs.hfc5.large
+ecs.hfc5.xlarge
+ecs.hfc5.2xlarge
+ecs.hfc5.3xlarge
+ecs.hfc5.4xlarge
+ecs.hfc5.6xlarge
+ecs.hfc5.8xlarge
+
+-hfg5, general-purpose instance family with high clock speeds
+ecs.hfg5.large
+ecs.hfg5.xlarge
+ecs.hfg5.2xlarge
+ecs.hfg5.3xlarge
+ecs.hfg5.4xlarge
+ecs.hfg5.6xlarge
+ecs.hfg5.8xlarge
+ecs.hfg5.14xlarge
+
+

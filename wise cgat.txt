@@ -1,0 +1,2917 @@
+@page "/wise-ai"
+@layout Layout.PrimaryLayout
+@using Wise_Ultima.Services
+@using System.Text;
+@using OpenAI
+@using OpenAI.Chat
+@using Newtonsoft.Json
+@using Wise_Ultima.Services
+@using Wise_Ultima.Models
+@using Wise_Ultima.Shared
+@using MongoDB.Bson
+@inject WiseAI WiseAI
+@inject HttpClient HttpClient
+@inject IJSRuntime JsRuntime
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject ILogger<WiseAI_chat> Logger
+@using System.Text.Json
+@using Newtonsoft.Json.Linq
+@using Blazored.LocalStorage
+@using System.IdentityModel.Tokens.Jwt
+@using System.Security.Claims
+@inject ILocalStorageService _localStorage
+@inject QueryRouterService QueryRouterService
+
+
+<PageTitle>Wise AI</PageTitle>
+
+<div class="wiseai-page-container @(_currentLayout == "search" ? "layout-search" : "layout-chat")">
+
+    <MudPopover Open="@(_openPopoverId != null)" Class="centered-popover">
+        <MudPaper Elevation="8" Class="pa-6" Style="width: 500px; border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+            <div class="d-flex align-center mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Color="Color.Error" Size="Size.Large" Class="mr-3" />
+                <MudText Typo="Typo.h5" Style="font-weight: 600; color: #1a1a1a;">Delete Chat</MudText>
+            </div>
+            <MudText Class="mb-5" Style="color: #6c757d; line-height: 1.6; font-size: 0.95rem;">
+                Are you sure you want to delete this chat? This action cannot be undone and all messages will be permanently removed.
+            </MudText>
+            <div class="d-flex justify-end gap-3">
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="HidePopover" Style="border-radius: 8px; text-transform: none; font-weight: 500; padding: 8px 24px; border-color: #dee2e6;" Class="hover-shadow">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="() => DeleteChat(_openPopoverId)" Style="border-radius: 8px; text-transform: none; font-weight: 500; padding: 8px 24px; box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);" Class="hover-shadow">
+                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="mr-1" />
+                    Delete
+                </MudButton>
+            </div>
+        </MudPaper>
+    </MudPopover>
+
+    @if (_currentLayout == "search")
+    {
+        <div class="search-container">
+            <div class="search-header">
+                <img src="images/logo.svg" alt="Logo" class="search-logo" />
+                <MudText Typo="Typo.h3" Class="search-title">Wise AI</MudText>
+                <MudText Typo="Typo.subtitle1" Class="search-subtitle">Conversational Interface for deep insights and expert guidance</MudText>
+            </div>
+            <div class="d-flex align-center gap-2 mt-2">
+                <MudText Typo="Typo.body2" Class="critical-label">Critical</MudText>
+                <MudButtonGroup Color="Color.Primary" Size="Size.Small" Class="@($"app-toggle-group {(_selectedAppIndex == 1 ? "app2-active" : "")}")">
+                    <MudButton Variant="@(_selectedAppIndex == 0 ? Variant.Filled : Variant.Outlined)"
+                               Class="app-toggle-btn"
+                               OnClick="() => SwitchApp(0)">App 1</MudButton>
+                    <MudButton Variant="@(_selectedAppIndex == 1 ? Variant.Filled : Variant.Outlined)"
+                               Class="app-toggle-btn"
+                               OnClick="() => SwitchApp(1)">App 2</MudButton>
+                </MudButtonGroup>
+            </div>
+            <div class="search-box-container">
+                <MudTextField T="string" @bind-Value="_currentMessage" Placeholder="Ask about your systems health, performance, or incidents..." Variant="Variant.Outlined" DisableUnderLine="true" Class="search-field" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" AdornmentAriaLabel="Search" @onkeydown="CheckSearchEnter" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@PerformSearch" Class="search-button">Search</MudButton>
+            </div>
+            <div class="popular-queries">
+                <MudText Typo="Typo.h6" Class="queries-title">Try these popular queries:</MudText>
+                <div class="queries-grid">
+                    @if (_popularQueries != null && _popularQueries.Any())
+                    {
+                        @foreach (var query in _popularQueries)
+                        {
+                            <div class="query-chip" @onclick="() => SelectPopularQuery(query)">
+                                <MudText Typo="Typo.body2">@query</MudText>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="chat-layout-container">
+            <div class="professional-chat-view">
+                <MudPaper Elevation="0" Class="py-0 flex-grow-1 professional-chat-container d-flex flex-column" style="position: relative; overflow: hidden;">
+
+
+                    <div class="chat-header">
+                        <div class="header-title">
+                            <MudText Typo="Typo.h6">@ChatTitle</MudText>
+                            <!-- Added app indicator -->
+                            <div class="app-indicator @(SelectedAppContext == "App1" ? "app1-indicator" : "app2-indicator")">
+                                @SelectedAppContext
+                            </div>
+                        </div>
+                        <div class="header-actions">
+                            <div class="d-flex flex-column align-end">
+                                <div class="d-flex gap-2">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@ResetDialog" Class="header-action-btn" Size="Size.Small">New Chat</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Feedback" OnClick="@SendFeedback" Class="header-action-btn" Size="Size.Small">Feedback</MudButton>
+                                </div>
+
+                                <div class="d-flex align-center gap-2 mt-2">
+                                    <MudText Typo="Typo.body2" Class="critical-label">Critical</MudText>
+                                    <MudButtonGroup Color="Color.Primary" Size="Size.Small" Class="@($"app-toggle-group {(_selectedAppIndex == 1 ? "app2-active" : "")}")">
+                                        <MudButton Variant="@(_selectedAppIndex == 0 ? Variant.Filled : Variant.Outlined)"
+                                                   Class="app-toggle-btn"
+                                                   OnClick="() => SwitchApp(0)">App 1</MudButton>
+                                        <MudButton Variant="@(_selectedAppIndex == 1 ? Variant.Filled : Variant.Outlined)"
+                                                   Class="app-toggle-btn"
+                                                   OnClick="() => SwitchApp(1)">App 2</MudButton>
+                                    </MudButtonGroup>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-messages-container" id="chatContainer">
+                        @foreach (var conversation in _discourse)
+                        {
+                            @if (conversation.ActorType == ActorType.Self)
+                            {
+                                <div class="message-row user-message-row">
+                                    <div class="message-content">
+                                        <div class="message-bubble user-message-bubble">
+                                            <MudText Typo="Typo.body1" Class="message-text">@((string)conversation.Message)</MudText>
+                                        </div>
+                                        <div class="message-timestamp user-timestamp">
+                                            <MudText Typo="Typo.caption">@conversation.Time.ToString("h:mm tt")</MudText>
+                                        </div>
+                                    </div>
+                                    <div class="message-avatar">
+                                        <MudAvatar Class="user-avatar">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" />
+                                        </MudAvatar>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="message-row ai-message-row">
+                                    <div class="message-avatar">
+                                        <MudAvatar Class="@($"ai-avatar {(conversation.IsError ? "error-avatar" : "")}")">
+                                            <MudIcon Icon="@(conversation.IsError ? Icons.Material.Filled.ErrorOutline : Icons.Material.Filled.AutoAwesome)" />
+                                        </MudAvatar>
+                                    </div>
+                                    <div class="message-content">
+                                        <div class="message-bubble ai-message-bubble @(conversation.IsError ? "error-bubble" : "")">
+                                            <MudText Typo="Typo.body1" Class="message-text">@((MarkupString)Markdig.Markdown.ToHtml((string)conversation.Message))</MudText>
+                                        </div>
+                                        <div class="message-timestamp ai-timestamp">
+                                            <MudText Typo="Typo.caption">@conversation.Time.ToString("h:mm tt")</MudText>
+                                        </div>
+
+                                        <!-- AI Content Attachments -->
+                                        @if (conversation.ChartData != null)
+                                        {
+                                            <div class="message-attachment">
+                                                <MudPaper Elevation="1" Class="attachment-paper">
+                                                    <PieCharts ChartData="@conversation.ChartData" />
+                                                </MudPaper>
+                                            </div>
+                                        }
+                                        @if (conversation.TableData != null)
+                                        {
+                                            <div class="message-attachment">
+                                                <MudPaper Elevation="1" Class="attachment-paper">
+                                                    <Table TableData="@conversation.TableData" />
+                                                </MudPaper>
+                                            </div>
+                                        }
+                                        @if (conversation.BarChartData != null)
+                                        {
+                                            <div class="message-attachment">
+                                                <MudPaper Elevation="1" Class="attachment-paper">
+                                                    <BarChart BarChartData="@conversation.BarChartData" />
+                                                </MudPaper>
+                                            </div>
+                                        }
+                                        @if (conversation.ActDialogActions != null && conversation.ActDialogComponent != null)
+                                        {
+                                            <div class="message-attachment act-dialog-attachment">
+                                                <MudGrid Spacing="2">
+                                                    @foreach (var action in conversation.ActDialogActions.OrderBy(a => a.IssueId))
+                                                    {
+                                                        <MudItem xs="12" md="6">
+                                                            <MudCard Elevation="2" Class="action-card">
+                                                                <MudCardContent Class="action-card-content">
+                                                                    <MudText Typo="Typo.subtitle1" Color="Color.Primary" Class="mb-2">
+                                                                        Component ID: @conversation.ActDialogComponent.CId
+                                                                    </MudText>
+                                                                    <MudText Typo="Typo.body1" Class="mb-2">
+                                                                        Issue @action.IssueId
+                                                                    </MudText>
+                                                                    <MudText Typo="Typo.body2" Color="Color.Dark" Class="action-description">
+                                                                        @action.Description
+                                                                    </MudText>
+                                                                </MudCardContent>
+                                                                <MudCardActions Class="justify-end">
+                                                                    <MudButton Variant="Variant.Filled"
+                                                                               Color="Color.Primary"
+                                                                               Size="Size.Small"
+                                                                               OnClick="@(() => ShowActDialog(conversation.ActDialogComponent, action))"
+                                                                               Class="action-button">
+                                                                        Act
+                                                                    </MudButton>
+                                                                </MudCardActions>
+                                                            </MudCard>
+                                                        </MudItem>
+                                                    }
+                                                </MudGrid>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                        @if (_isLoading)
+                        {
+                            <div class="message-row ai-message-row">
+                                <div class="message-avatar">
+                                    <MudAvatar Class="ai-avatar">
+                                        <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" />
+                                    </MudAvatar>
+                                </div>
+                                <div class="message-content">
+                                    <div class="message-bubble ai-message-bubble typing-bubble">
+                                        <div class="typing-dots">
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        @if (!_discourse.Any() && !_isLoading)
+                        {
+                            <div class="empty-chat-placeholder">
+                                <div class="placeholder-content">
+                                    <img src="images/logo.svg" alt="Wise AI Logo" class="placeholder-logo" />
+                                    <MudText Typo="Typo.h5" Style="margin-top:16px; color: #4a5568;">How can I help you today?</MudText>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="professional-input-section">
+                        @if (_recommendedQuestions != null && _recommendedQuestions.Any() && !_isLoading)
+                        {
+                            <div class="recommended-questions-container">
+                                <div class="recommended-questions-wrapper">
+                                    @foreach (var question in _recommendedQuestions)
+                                    {
+                                        <div class="question-box" @onclick="() => AutoSubmitRecommendedQuestion(question)">
+                                            @question
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        <div class="input-field-container">
+                            <MudTextField @ref="_refEntryField" @bind-Value="_currentMessage" Placeholder="Ask me anything about your IT infrastructure..." Variant="Variant.Outlined" Class="professional-input-field" Lines="1" Immediate="true" Disabled="@_isLoading" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="@(async () => await SubmitAsync())" AdornmentAriaLabel="Send Message" @onkeydown="@CheckEnter" />
+                        </div>
+                    </div>
+                </MudPaper>
+            </div>
+
+            <div class="right-sidebar">
+                <MudPaper Elevation="0" Class="sidebar-section flex-grow-1">
+                    <MudText Typo="Typo.h6" Class="sidebar-section-title">Popular Queries</MudText>
+                    <div class="sidebar-list">
+                        @foreach (var query in _popularQueries)
+                        {
+                            <div class="popular-query-item" @onclick="() => AskPopularQuery(query)">
+                                <MudText Typo="Typo.body2">@query</MudText>
+                            </div>
+                        }
+                    </div>
+                </MudPaper>
+                <MudPaper Elevation="0" Class="sidebar-section flex-grow-1">
+                    <MudText Typo="Typo.h6" Class="sidebar-section-title">Recent Chats</MudText>
+                    <div class="recent-chats-list">
+                        @foreach (var group in RecentChats.GroupBy(chat => chat.CreatedAt.Date).OrderByDescending(g => g.Key))
+                        {
+                            <div class="history-date-group">
+                                <MudText Typo="Typo.overline" Class="history-date">@group.Key.ToString("MMMM dd, yyyy")</MudText>
+                                @foreach (var chat in group.OrderByDescending(c => c.CreatedAt))
+                                {
+                                    <div class="@($"recent-chat-item {(chat.ChatId == _currentChatId ? "active" : "")}")">
+                                        <div class="recent-chat-content" @onclick="() => OpenChat(chat.ChatId)">
+                                            <MudText Typo="Typo.body2" Class="recent-chat-title">@chat.Messages.FirstOrDefault()?.Content</MudText>
+                                            <MudText Typo="Typo.caption" Class="recent-chat-date">@GetRelativeTime(chat.CreatedAt)</MudText>
+                                        </div>
+                                        <span @onclick:stopPropagation="true">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                           Class="recent-chat-delete-btn"
+                                                           Size="Size.Small"
+                                                           OnClick="() => ShowPopover(chat.ChatId)" />
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </MudPaper>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .wiseai-page-container {
+        height: 100%;
+        width: 100%;
+    }
+
+        .wiseai-page-container.layout-search {
+            height: 100%;
+            width: 100%;
+            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wiseai-page-container.layout-chat {
+            display: block;
+        }
+
+    /* --- Search Interface Styles --- */
+    .search-container {
+        width: 100%;
+        max-width: 900px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2.5rem;
+    }
+
+    .search-header {
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+
+    .search-logo {
+        width: 70px;
+        height: auto;
+        margin-bottom: 1rem;
+    }
+
+    .search-title {
+        font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+        font-size: 2.75rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .search-subtitle {
+        font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 400;
+        color: #5a6474;
+        max-width: 500px;
+    }
+
+    .search-box-container {
+        width: 100%;
+        max-width: 700px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .search-field {
+        flex-grow: 1;
+        --mud-palette-primary-hover: rgba(25, 118, 210, 0.05);
+    }
+
+        .search-field.mud-input-outlined .mud-input-slot {
+            padding-left: 10px !important;
+        }
+
+    .search-button {
+        height: 56px;
+        width: 120px;
+        font-weight: 500;
+        text-transform: none;
+        font-size: 1rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 8px rgba(25, 118, 210, 0.1);
+        transition: all 0.2s ease-in-out;
+    }
+
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08), 0 6px 12px rgba(25, 118, 210, 0.15);
+        }
+
+    .popular-queries {
+        width: 100%;
+        margin-top: 1rem;
+    }
+
+    .queries-title {
+        font-weight: 500;
+        color: #5a6474;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+
+    .queries-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1rem;
+    }
+
+    .query-chip {
+        padding: 0.9rem;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease-out;
+        border: 1px solid #e9ecef;
+        text-align: center;
+        color: #34495e;
+    }
+
+        .query-chip:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-color: #a4c9f5;
+            background-color: #ffffff;
+            color: #1976d2;
+        }
+
+    /* --- Chat Layout & Sidebar --- */
+    .chat-layout-container {
+        display: flex;
+        height: 100vh;
+        width: 100%;
+        background-color: #f4f6f8;
+    }
+
+    .professional-chat-view {
+        flex-grow: 1;
+        min-width: 0;
+        display: flex;
+        padding: 1rem;
+        padding-right: 0.5rem;
+    }
+
+    .professional-chat-container {
+        background: #ffffff !important;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        width: 100%;
+    }
+
+    .right-sidebar {
+        width: 340px;
+        min-width: 340px;
+        background-color: transparent;
+        padding: 1rem;
+        padding-left: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .sidebar-section {
+        background-color: #ffffff !important;
+        border: 1px solid #e9ecef !important;
+        border-radius: 12px !important;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+        .sidebar-section.flex-grow-1 {
+            min-height: 0;
+        }
+
+        .sidebar-section .sidebar-list,
+        .sidebar-section .recent-chats-list {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+    .sidebar-section-title {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #f1f3f5;
+    }
+
+    .popular-query-item {
+        padding: 0.6rem 0.8rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        line-height: 1.4;
+    }
+
+        .popular-query-item:hover {
+            background-color: #f8f9fa;
+        }
+
+    .history-date {
+        padding: 8px 0;
+        font-weight: 500;
+        color: #6c757d;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    .recent-chat-item {
+        padding: 0.75rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+
+        .recent-chat-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .recent-chat-item.active {
+            background-color: #e7f5ff;
+            border-left-color: #1976d2;
+        }
+
+    .recent-chat-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 500;
+        color: #495057;
+    }
+
+    .recent-chat-date {
+        color: #868e96;
+    }
+
+    .capability-item {
+        display: flex;
+        align-items: center;
+        color: #495057;
+        font-size: 0.9rem;
+        padding: 0.25rem 0;
+    }
+
+    /* --- Chat Theming Styles --- */
+    .chat-header {
+        padding: 0.75rem 1.5rem;
+        border-bottom: 1px solid #e8ecef;
+        background: #ffffff;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+        z-index: 100;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .header-title {
+        flex: 1;
+        text-align: center;
+        min-width: 0; /* This is critical for flexbox truncation */
+        padding: 0 1rem;
+    }
+
+        .header-title .mud-typography {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+    .header-actions {
+        flex-shrink: 0; /* Prevents buttons from shrinking */
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    /* Responsive behavior for smaller screens */
+    @@media (max-width: 768px) {
+        .chat-header {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .header-title {
+            width: 100%;
+            text-align: left;
+        }
+
+        .header-actions {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    .header-action-btn {
+        text-transform: none;
+        font-weight: 500;
+    }
+
+    .chat-messages-container {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+
+        .chat-messages-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages-container::-webkit-scrollbar-track {
+            background: #f1f3f5;
+            border-radius: 4px;
+        }
+
+        .chat-messages-container::-webkit-scrollbar-thumb {
+            background-color: #dee2e6;
+            border-radius: 4px;
+            border: 2px solid #f1f3f5;
+        }
+
+            .chat-messages-container::-webkit-scrollbar-thumb:hover {
+                background-color: #ced4da;
+            }
+
+    .empty-chat-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+    }
+
+    .placeholder-logo {
+        width: 80px;
+        opacity: 0.5;
+    }
+
+    .message-row {
+        display: flex;
+        margin-bottom: 1.75rem;
+        animation: fadeInUp 0.3s ease-out;
+        align-items: flex-end;
+    }
+
+    .user-message-row {
+        justify-content: flex-end;
+    }
+
+    .ai-message-row {
+        justify-content: flex-start;
+    }
+
+    .message-avatar {
+        margin: 0 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .user-message-row .message-avatar {
+        order: 2;
+    }
+
+    .user-avatar, .ai-avatar {
+        width: 36px !important;
+        height: 36px !important;
+    }
+
+    .user-avatar {
+        background-color: #542BFC !important;
+        color: white !important;
+    }
+
+    .ai-avatar {
+        background-color: #f1f3f5 !important;
+        color: #542BFC !important;
+    }
+
+    .message-content {
+        max-width: 75%;
+    }
+
+    .message-bubble {
+        padding: 0.8rem 1.3rem;
+        border-radius: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    .user-message-bubble {
+        background: linear-gradient(135deg, #7B2BFC, #542BFC);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .ai-message-bubble {
+        position: relative;
+        padding-top: 2.5rem;
+        background: #ffffff;
+        color: #333;
+        border: 1px solid #e9ecef;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    /* --- Fix for List Alignment in Chat Bubbles --- */
+    .message-text ol,
+    .message-text ul {
+        padding-left: 25px; /* Adds indentation to the list */
+        margin-bottom: 1rem; /* Ensures space after the list */
+    }
+
+    .message-text li {
+        padding-left: 5px; /* Adds a little space between the number/bullet and the text */
+        margin-bottom: 0.5rem; /* Adds space between list items */
+    }
+
+    .message-text p {
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .message-timestamp {
+        padding: 0.25rem 0.2rem 0 0.2rem;
+        text-align: right;
+    }
+
+    .ai-timestamp {
+        text-align: left;
+    }
+
+    .message-timestamp .mud-typography-caption {
+        font-size: 0.7rem !important;
+        color: #868e96;
+    }
+
+    /* --- Input Section --- */
+    .professional-input-section {
+        background: #ffffff;
+        border-top: 1px solid #e8ecef;
+        padding: 1rem 1.5rem;
+        flex-shrink: 0;
+        border-bottom-left-radius: 16px;
+        border-bottom-right-radius: 16px;
+    }
+
+    .typing-bubble {
+        padding: 0.9rem 1.3rem;
+    }
+
+    .typing-dots {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+
+        .typing-dots span {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #adb5bd;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+            .typing-dots span:nth-child(1) {
+                animation-delay: -0.32s;
+            }
+
+            .typing-dots span:nth-child(2) {
+                animation-delay: -0.16s;
+            }
+
+    .recommended-questions-container {
+        margin-bottom: 1rem;
+    }
+
+    .recommended-questions-wrapper {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+    }
+
+    .question-box {
+        flex-shrink: 0;
+        padding: 0.5rem 0.9rem;
+        background-color: #f1f3f5;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        color: #34495e;
+    }
+
+        .question-box:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+    .input-field-container {
+        padding-top: 0;
+    }
+
+    .professional-input-field .mud-input-slot {
+        padding: 8px 16px;
+    }
+
+    /* --- Copy & Error Styles --- */
+    .copy-button {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+        color: #868e96;
+    }
+
+    .ai-message-bubble:hover .copy-button {
+        opacity: 1;
+    }
+
+    .copy-button:hover {
+        color: #495057;
+    }
+
+    .ai-avatar.error-avatar {
+        background-color: #FFF0F0 !important;
+        color: #D32F2F !important;
+    }
+
+    .ai-message-bubble.error-bubble {
+        background: #FFF0F0;
+        border: 1px solid #FFD9D9;
+        color: #5E2121;
+    }
+
+    /* --- Attachment Styles --- */
+    .message-attachment {
+        margin-top: 12px;
+    }
+
+    .attachment-paper {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+    .act-dialog-attachment {
+        margin-top: 16px;
+    }
+
+    .action-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+    }
+
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+    .action-card-content {
+        padding: 16px;
+    }
+
+    .action-description {
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .action-button {
+        border-radius: 8px;
+        text-transform: none;
+        font-weight: 500;
+    }
+
+    /* Animations & Popovers */
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes typing {
+        0%, 80%, 100% {
+            transform: scale(0.6);
+            opacity: 0.5;
+        }
+
+        40% {
+            transform: scale(1.0);
+            opacity: 1;
+        }
+    }
+
+    .centered-popover {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        z-index: 1300 !important;
+    }
+
+    .hover-shadow:hover {
+        transform: translateY(-1px);
+        transition: all 0.2s ease-in-out;
+    }
+
+    /* --- Delete button styles --- */
+
+    .recent-chat-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+
+        .recent-chat-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .recent-chat-item.active {
+            background-color: #e7f5ff;
+            border-left-color: #1976d2;
+        }
+
+    .recent-chat-content {
+        flex-grow: 1;
+        min-width: 0;
+        margin-right: 8px;
+    }
+
+    .recent-chat-delete-btn {
+        color: #9e9e9e;
+        opacity: 0;
+        transition: opacity 0.2s ease, color 0.2s ease;
+    }
+
+    .recent-chat-item:hover .recent-chat-delete-btn {
+        opacity: 1;
+    }
+
+    .recent-chat-delete-btn:hover {
+        color: #f44336;
+    }
+
+    /* Added styles for app indicator */
+    .app-indicator {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        margin-left: 8px;
+        vertical-align: middle;
+    }
+
+    .app1-indicator {
+        background-color: rgba(25, 118, 210, 0.1);
+        color: #1976d2;
+    }
+
+    .app2-indicator {
+        background-color: rgba(198, 40, 40, 0.1);
+        color: #c62828;
+    }
+
+    .app-toggle-container {
+        display: flex;
+        gap: 8px;
+        margin-left: 12px;
+    }
+
+    .app-toggle-btn {
+        min-width: 80px;
+        text-transform: none;
+        font-weight: 500;
+        border-radius: 8px;
+    }
+
+    /* Enhanced Critical App Toggle Styles */
+    .critical-label {
+        font-weight: 700;
+        color: #2d3748;
+        margin-right: 10px;
+        font-size: 0.95rem;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        opacity: 0.9;
+        position: relative;
+        top: 1px;
+    }
+
+    .app-toggle-group {
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+        .app-toggle-group:hover {
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+    .app-toggle-btn {
+        min-width: 75px !important;
+        height: 36px !important;
+        padding: 0 14px !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        text-transform: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        position: relative;
+        z-index: 1;
+    }
+
+        .app-toggle-btn:first-child {
+            border-top-left-radius: 10px !important;
+            border-bottom-left-radius: 10px !important;
+        }
+
+        .app-toggle-btn:last-child {
+            border-top-right-radius: 10px !important;
+            border-bottom-right-radius: 10px !important;
+        }
+
+        .app-toggle-btn.mud-button-filled {
+            background: linear-gradient(135deg, #7B2BFC, #542BFC) !important;
+            color: white !important;
+            box-shadow: 0 2px 4px rgba(84, 43, 252, 0.3);
+        }
+
+        .app-toggle-btn.mud-button-outlined {
+            background-color: transparent !important;
+            color: #542BFC !important;
+            border: 1px solid transparent !important;
+        }
+
+            .app-toggle-btn.mud-button-outlined:hover {
+                background-color: rgba(84, 43, 252, 0.06) !important;
+                border-color: rgba(84, 43, 252, 0.2) !important;
+            }
+
+        .app-toggle-btn.mud-button-filled:hover {
+            background: linear-gradient(135deg, #8c3ffd, #6332ff) !important;
+            box-shadow: 0 3px 6px rgba(84, 43, 252, 0.4);
+        }
+
+    /* Active state animation */
+    .app-toggle-group::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(135deg, #7B2BFC, #542BFC);
+        border-radius: 10px;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 0;
+    }
+
+    .app-toggle-group.app2-active::before {
+        transform: translateX(100%);
+    }
+
+    /* Header adjustments */
+    .header-actions .d-flex.flex-column {
+        align-items: flex-end;
+    }
+
+        .header-actions .d-flex.flex-column > div:last-child {
+            margin-top: 8px;
+        }
+
+    /* Add subtle glow effect on hover */
+    .app-toggle-group:hover::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: rgba(84, 43, 252, 0.15);
+        border-radius: 12px;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .app-toggle-group:hover::after {
+        opacity: 1;
+    }
+
+</style>
+
+<script>
+    window.scrollToBottom = (elementId) => {
+    setTimeout(() => {
+    var element = document.getElementById(elementId);
+    if (element) {
+    element.scrollTop = element.scrollHeight;
+    }
+    }, 0);
+    }
+</script>
+
+
+@code {
+
+    private string ChatTitle => _discourse.FirstOrDefault()?.Message.ToString() ?? "AI Conversation";
+    [Parameter]
+    public ChatDiscourse Discourse { get; set; } = new();
+    private bool _hasFirstQuery = false;
+    private string _currentMessage = "";
+    private List<string> _recommendedQuestions = new List<string>();
+    private List<string> _popularQueries = new List<string>
+    {
+      "Show high CPU systems",
+      "Memory usage trends last 24h",
+      "What are the systems with high disk usage?",
+      "What's the health status of the system a010014p002?",
+      "What are the systems with p1 issues?",
+      "At what time did the most amount of incidents occur?"
+    };
+    private List<RecentItem> _recentItems;
+    private string? _userEmail;
+    private string _currentLayout = "search"; // "search" or "chat"
+    [Parameter]
+    public string ChatId { get; set; } // This holds the chatId passed to the component
+    [Parameter]
+    public string? Title { get; set; }
+    private string userMessageContent = "";
+    private Agent? _agent = new();
+    private bool speakerOn = false;
+    private bool _isTfDisabled = true;
+    private string? _openPopoverId;
+    private MudTextField<string>? _refEntryField;
+    private ChartData _chartData;
+    private bool _isStreamingResponse = true;
+    private string _streamingMessage = string.Empty;
+    private Conversation _currentStreamingConversation = null;
+    private double _rotationDegrees = 0;
+    private bool _isLoading = false;
+    private Timer _rotationTimer;
+    private bool _isTransitioning = false;
+    private ActDialogData actDialogData;
+    private ElementReference _chatContainerRef;
+    private string? _currentChatId;
+    private Timer? _scrollTimer;
+    private const int ScrollCheckInterval = 100; // milliseconds
+    private List<string> _visualizationQuestions = new List<string>
+    {
+        "At what time, did the most amount of incidents occur",
+        "What is the overall health of all my systems using a graph",
+        "At what time, did the most amount of incidents occur on 2024-05-02?",
+        "What are systems with the error 'Data Metric Missing'?",
+        "What are the systems with high cpu usage?",
+        "What are the systems with low cpu usage",
+        "What are the systems with low memory usage",
+        "What are the systems with low disk usage",
+        "Whats the health status of the system a010014p002 ?",
+        "What are the systems with p1 issues?",
+        "What are the systems that are located in Germany?",
+        "What are the systems with Linux Operating system?"
+    }.OrderBy(x => Random.Shared.Next()).Take(3).ToList();
+    private bool _isRecentItemsCollapsed = false;
+    private bool _isLeftSidebarCollapsed = false;
+
+    private const string CollapsedLeftSidebarWidth = "50px";
+
+    private const string ExpandedLeftSidebarWidth = "300px";
+
+    private string CurrentLeftSidebarWidth => _isLeftSidebarCollapsed ? CollapsedLeftSidebarWidth : ExpandedLeftSidebarWidth;
+
+    // Added for Critical App feature
+    private int _selectedAppIndex = 0;
+    private string SelectedAppContext => _selectedAppIndex == 0 ? "App1" : "App2"; // ADDED: Get app context based on selection
+
+    private List<Chat> RecentChats = new List<Chat>();
+    private List<Conversation> _discourse = new List<Conversation>(); // Replaced UserScopedService.WiseDiscourse.Discourse
+    private string _wiseAIThreadId; // Replaced UserScopedService.WiseAIThreadId
+    private string _organizationId = "default_org_id"; // Hardcoded or fetch if needed
+
+    protected override async Task OnInitializedAsync()
+    {
+        var token = await _localStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            Logger.LogWarning("No authtoken found");
+            userId = null;
+        }
+        else
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+            userId = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                Logger.LogWarning("No 'sub' claim found in JWT token.");
+                userId = null;
+            }
+            else
+            {
+                Logger.LogInformation("UserId extracted from JWT: {UserId}", userId);
+            }
+        }
+
+        await LoadRecentChats();
+
+        if (_discourse.Count > 0 ||
+          !string.IsNullOrEmpty(_wiseAIThreadId))
+        {
+            _hasFirstQuery = true;
+            _currentLayout = "chat";
+        }
+        else
+        {
+            await RestartAi();
+        }
+
+        // Initialize with 3 random questions directly from a predefined list
+        var allQuestions = new List<string>
+    {
+      "At what time, did the most amount of incidents occur",
+      "What is the overall health of all my systems using a graph",
+      "At what time, did the most amount of incidents occur on 2024-05-02?",
+      "What are systems with the error 'Data Metric Missing'?",
+      "What are the systems with high cpu usage?",
+      "What are the systems with low cpu usage",
+      "What are the systems with low memory usage",
+      "What are the systems with low disk usage",
+      "Whats the health status of the system a010014p002 ?",
+      "What are the systems with p1 issues?",
+      "What are the systems that are located in Germany?",
+      "What are the systems with Linux Operating system?"
+    };
+
+        var random = new Random();
+        _visualizationQuestions = allQuestions
+         .OrderBy(x => random.Next())
+         .Take(3)
+         .ToList();
+
+        _currentChatId = null;
+        _scrollTimer = new Timer(async _ =>
+        {
+            if (_isLoading)
+            {
+                await ScrollToBottom();
+            }
+        }, null, 0, 100);
+    }
+
+    private async Task LoadRecentChats()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync($"api/Chat/recent/{userId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                RecentChats = System.Text.Json.JsonSerializer.Deserialize<List<Chat>>(json, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                }) ?? new List<Chat>();
+                StateHasChanged();
+            }
+            else
+            {
+                Logger.LogWarning("Failed to load recent chats: {StatusCode}", response.StatusCode);
+                Snackbar.Add("Failed to load recent chats", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading recent chats for user {UserId}", userId);
+            Snackbar.Add($"Error loading recent chats: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenChat(string chatId)
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync($"api/Chat/{chatId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var chat = System.Text.Json.JsonSerializer.Deserialize<Chat>(json, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                if (chat != null)
+                {
+                    _discourse.Clear();
+                    foreach (var message in chat.Messages)
+                    {
+                        var conversation = new Conversation
+                        {
+                            ActorName = message.Sender == "user" ? "You" : "Wise-AI",
+                            ActorType = message.Sender == "user" ? ActorType.Self : ActorType.AiBot,
+                            Message = message.Content,
+                            Time = message.Timestamp
+                        };
+
+                        if (message.ContentType == "chart")
+                            conversation.ChartData = message.ChartData;
+                        else if (message.ContentType == "table")
+                            conversation.TableData = message.TableData;
+                        else if (message.ContentType == "barChart")
+                            conversation.BarChartData = message.BarChartData;
+                        else if (message.ContentType == "actDialog")
+                        {
+                            conversation.ActDialogActions = message.ActDialogData?.Actions;
+                            conversation.ActDialogComponent = message.ActDialogData?.Component;
+                        }
+
+                        _discourse.Add(conversation);
+                    }
+                    _hasFirstQuery = true;
+                    _currentLayout = "chat";
+                    _currentChatId = chat.ChatId;
+                    await InvokeAsync(StateHasChanged);
+                    await ScrollToBottom();
+                }
+            }
+            else
+            {
+                Logger.LogWarning("Failed to open chat {ChatId}: {StatusCode}", chatId, response.StatusCode);
+                Snackbar.Add("Failed to open chat", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error opening chat {ChatId}", chatId);
+            Snackbar.Add($"Error opening chat: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private List<RecentItem> GetRecentItems()
+
+    {
+        // Dummy data for recent item
+        return new List<RecentItem>
+    {
+      new RecentItem {
+        Title = "Give me the issue details of 'b0278f3...'",
+        Date = "Aug 26, 2024",
+        Icon = "R",
+        Color = Color.Primary,
+        IsActive = true
+      },
+
+      new RecentItem {
+        Title = "What are the systems with high disk usage?",
+        Date = "Feb 23, 2024",
+        Icon = "S",
+        Color = Color.Secondary
+      },
+      new RecentItem {
+        Title = "Show me performance metrics",
+        Date = "Feb 20, 2024",
+        Icon = "P",
+        Color = Color.Info
+      },
+            // Add more items as needed
+        };
+    }
+
+    private void SelectRecentItem(RecentItem item)
+
+    {
+        // Handle item selection
+        foreach (var recentItem in _recentItems)
+        {
+            recentItem.IsActive = recentItem == item;
+
+        }
+
+        StateHasChanged();
+    }
+
+
+
+    public class RecentItem
+
+    {
+
+        public string Title { get; set; }
+
+        public string Date { get; set; }
+
+        public string Icon { get; set; }
+
+        public Color Color { get; set; }
+
+        public bool IsActive { get; set; }
+
+    }
+
+
+
+    // This function will be called when the 'Save Chat' button is clicked
+
+    private async Task SaveCurrentChat()
+    {
+        var chat = new Chat
+        {
+            ChatId = _currentChatId ?? Guid.NewGuid().ToString(),
+            UserId = userId,
+            Messages = new List<Message>()
+        };
+        foreach (var conversation in _discourse)
+        {
+            var message = new Message
+            {
+                Sender = conversation.ActorType == ActorType.Self ? "user" : "ai",
+                Content = conversation.Message.ToString(),
+                ContentType = "text",
+                Timestamp = conversation.Time
+            };
+
+            if (conversation.ChartData != null)
+            {
+                message.ContentType = "chart";
+                message.ChartData = conversation.ChartData;
+            }
+            else if (conversation.TableData != null)
+            {
+                message.ContentType = "table";
+                message.TableData = conversation.TableData;
+            }
+            else if (conversation.BarChartData != null)
+            {
+                message.ContentType = "barChart";
+                message.BarChartData = conversation.BarChartData;
+            }
+            else if (conversation.ActDialogActions != null && conversation.ActDialogComponent != null)
+            {
+                message.ContentType = "actDialog";
+                message.ActDialogData = new MessageActDialogData
+                {
+                    Component = conversation.ActDialogComponent,
+                    Actions = conversation.ActDialogActions
+                };
+            }
+            chat.Messages.Add(message);
+        }
+        await WiseAI.SaveChatAsync(chat);
+        Snackbar.Add("Chat saved Successfully!!", Severity.Success);
+
+        // Refresh RecentChats list after saving
+        await LoadRecentChats();
+        StateHasChanged();
+    }
+
+
+
+    public void Dispose()
+    {
+        _scrollTimer?.Dispose();
+    }
+    private async Task ScrollToBottom()
+    {
+        await InvokeAsync(StateHasChanged);
+        await JS.InvokeVoidAsync("scrollToBottom", "chatContainer");
+    }
+
+    private string? userId;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_refEntryField != null)
+            _refEntryField.TextUpdateSuppression = true;
+    }
+
+
+
+    private async Task RestartAi()
+
+    {
+
+        _wiseAIThreadId = await WiseAI.Initialize(new Agent { Name = "Wise-AI", AssistantId = "asst_cHJIUvqUoB8lH7z61bZV3cnq" });
+
+    }
+
+
+
+    private async Task PerformSearch()
+    {
+        if (string.IsNullOrWhiteSpace(_currentMessage))
+            return;
+
+        // Re-fetch recent chats just before switching views.
+        await LoadRecentChats();
+
+        // Switch to chat layout
+        _currentLayout = "chat";
+        _hasFirstQuery = true;
+        await InvokeAsync(StateHasChanged);
+
+        // Process the search as a query
+        await SubmitAsync();
+    }
+
+
+
+    private void CheckSearchEnter(KeyboardEventArgs e)
+
+    {
+
+        if (e.Key == "Enter" || e.Code == "NumpadEnter")
+
+        {
+
+            PerformSearch();
+
+        }
+
+    }
+
+
+
+    private void SelectPopularQuery(string query)
+
+    {
+
+        _currentMessage = query;
+
+        PerformSearch();
+
+    }
+
+
+
+    private async Task SubmitFirstQuery()
+
+    {
+
+        if (string.IsNullOrWhiteSpace(_currentMessage))
+
+            return;
+
+
+
+        _isTransitioning = true;
+
+        await InvokeAsync(StateHasChanged);
+
+
+
+        await Task.Delay(2000);
+
+
+
+        _hasFirstQuery = true;
+
+        _isTransitioning = false;
+
+        await SubmitAsync();
+
+
+
+        // Update RecentChats list after submitting
+
+        await LoadRecentChats();
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+
+
+    private void PreFillQuery(string question)
+
+    {
+
+        _currentMessage = question;
+
+    }
+
+
+
+    private List<ChartSeries> GetChartSeries(Chart chart)
+
+    {
+
+        var series = new List<ChartSeries>();
+
+        var dataArray = chart.InputData.ToArray();
+
+
+
+        // Ensure InputData and InputLabels have the same length
+
+        if (chart.InputData.Count != chart.InputLabels.Count)
+
+        {
+
+            throw new Exception("Mismatch between InputData and InputLabels count");
+
+        }
+
+
+
+        for (int i = 0; i < chart.InputData.Count; i++)
+
+        {
+
+            series.Add(new ChartSeries
+
+            {
+
+                Name = chart.InputLabels[i],
+
+                Data = new double[] { chart.InputData[i] }
+
+            });
+
+        }
+
+
+
+        return series;
+
+    }
+
+
+
+    public string SelectedTab { get; set; } = "Current";  // Set a default value like "Current"
+
+
+
+    private void ShowActDialog(Component component, ActionResolution action)
+
+    {
+
+        var parameters = new DialogParameters();
+
+        parameters.Add("SelComponent", component);
+
+        parameters.Add("Action", action);
+
+        parameters.Add("SelectedTab", "Actions");
+
+
+
+        var options = new DialogOptions
+
+        {
+
+            CloseOnEscapeKey = true,
+
+            DisableBackdropClick = false,
+
+            ClassBackground = "blurr"
+
+        };
+
+
+
+        DialogService.Show<ActDialog>("Action", parameters, options);
+
+        StateHasChanged();
+
+    }
+
+
+
+    private CancellationTokenSource _loadingCts = new CancellationTokenSource();
+
+
+
+    private async Task SubmitAsync()
+    {
+        if (!string.IsNullOrEmpty(_currentMessage))
+        {
+            _isTfDisabled = true;
+
+            _discourse.Add(new Conversation
+            {
+                ActorName = "You",
+                ActorType = ActorType.Self,
+                Message = _currentMessage,
+                Time = DateTime.Now
+            });
+
+            await ScrollToBottom();
+            _isLoading = true;
+            var userQuery = _currentMessage;
+            _currentMessage = string.Empty; // Clear the input field
+            await InvokeAsync(StateHasChanged);
+            await _refEntryField!.BlurAsync();
+
+            // Save after user message
+            await SaveCurrentChat();
+
+            try
+            {
+                var payload = new
+                {
+                    query = userQuery,
+                    app_context = SelectedAppContext,
+                    organization_uuid = _organizationId
+                };
+
+                var stringContent = new StringContent(JsonConvert.SerializeObject(payload), System.Text.Encoding.UTF8, "application/json");
+                var routerResponse = await HttpClient.PostAsync("http://40.76.230.77:8892/query-router", stringContent);
+
+                if (!routerResponse.IsSuccessStatusCode)
+                {
+                    throw new HttpRequestException($"Error: Received status code {routerResponse.StatusCode} from query-router endpoint.");
+                }
+
+                var routerJson = await routerResponse.Content.ReadAsStringAsync();
+                var routerResult = JsonConvert.DeserializeObject<List<dynamic>>(routerJson);
+                var route = routerResult[0].name.ToString();
+                var value = routerResult[0].value.ToString();
+
+                string response;
+
+                if (route == "function_router")
+                {
+                    try
+                    {
+                        var app_context = routerResult[0].app_context.ToString();
+                        var queryPayload = new List<object>
+                        {
+                             new { value = value, app_context = app_context, organization_uuid = _organizationId }
+                        };
+                        var functionResponse = await HttpClient.PostAsJsonAsync("http://40.76.230.77:8891/execute_queries", queryPayload);
+
+                        if (!functionResponse.IsSuccessStatusCode)
+                        {
+                            throw new HttpRequestException($"Error: Received status code {functionResponse.StatusCode} from function_router endpoint.");
+                        }
+
+                        var responseContent = await functionResponse.Content.ReadAsStringAsync();
+                        var jsonResponse = JsonConvert.DeserializeObject<FunctionRouterResponse>(responseContent);
+
+                        if (jsonResponse?.Results != null && jsonResponse.Results.Count > 0)
+                        {
+                            var chartDataJson = jsonResponse.Results[0];
+                            var rawChartData = JsonConvert.DeserializeObject<dynamic>(chartDataJson);
+
+
+                            var combinedContent = $"Don't do any further analysis just create a 1 line summary.Use User Query and Response data to get only one line summary of the Response Data based on the User Query. User Query: {userQuery}\n\nResponse Data: {responseContent}";
+
+                            if (rawChartData.type == "pie_chart")
+                            {
+                                var chartData = new ChartData();
+                                foreach (var chart in rawChartData.data)
+                                {
+                                    chartData.Charts.Add(new Chart
+                                    {
+                                        ChartName = chart.chart_name,
+                                        InputData = ((JArray)chart.InputData).ToObject<List<int>>(),
+                                        InputLabels = ((JArray)chart.InputLabels).ToObject<List<string>>()
+                                    });
+                                }
+                                response = await WiseAI.GetResponseAsync(_wiseAIThreadId, combinedContent);
+                                await AddAiContentToChat(response, chartData);
+                            }
+                            else if (rawChartData.type == "table")
+                            {
+                                var tableData = new TableData
+                                {
+                                    Headings = ((JArray)rawChartData.data.headings).ToObject<List<string>>(),
+                                    Rows = ((JArray)rawChartData.data.rows).ToObject<List<List<string>>>()
+                                };
+                                response = await WiseAI.GetResponseAsync(_wiseAIThreadId, combinedContent);
+                                await AddAiContentToChat(response, tableData: tableData);
+                            }
+                            else if (rawChartData.type == "bar_chart")
+                            {
+                                var barChartData = new BarChartData
+                                {
+                                    Hours = ((JArray)rawChartData.data[0].hours).ToObject<List<string>>(),
+                                    Counts = ((JArray)rawChartData.data[0].counts).ToObject<List<int>>()
+                                };
+                                response = await WiseAI.GetResponseAsync(_wiseAIThreadId, combinedContent);
+                                await AddAiContentToChat(response, barChartData: barChartData);
+                            }
+                            else if (rawChartData.type == "act_dialog")
+                            {
+                                var actDialogData = JsonConvert.DeserializeObject<ActDialogResponse>(chartDataJson);
+                                var actions = new List<ActionResolution>();
+                                for (int i = 0; i < actDialogData.data.issues.Count; i++)
+                                {
+                                    var issue = actDialogData.data.issues[i];
+                                    actions.Add(new ActionResolution
+                                    {
+                                        Description = issue.description,
+                                        Resolutions = issue.action_steps ?? new List<string>(),
+                                        IssueId = i + 1,
+                                        ActionId = i + 1
+                                    });
+                                }
+                                var component = new Component { CId = actDialogData.data.component_id };
+                                response = await WiseAI.GetResponseAsync(_wiseAIThreadId, combinedContent);
+                                await AddAiContentToChat(response, actDialogActions: actions, actDialogComponent: component);
+                            }
+                            else
+                            {
+                                response = rawChartData.ToString();
+                                await AddAiContentToChat(response);
+                            }
+                        }
+                        else
+                        {
+                            response = "Unexpected JSON structure in the response.";
+                            await AddAiContentToChat(response);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        response = $"An error occurred while processing the data: {ex.Message}";
+
+                        _discourse.Add(new Conversation
+                        {
+                            ActorName = "Wise-AI",
+                            ActorType = ActorType.AiBot,
+                            Message = response,
+                            Time = DateTime.Now,
+                            IsError = true
+                        });
+                    }
+                }
+                else
+                {
+                    response = await WiseAI.GetResponseAsync(_wiseAIThreadId, value);
+                    await AddAiContentToChat(response);
+                }
+
+                // Save after AI response
+                await SaveCurrentChat();
+            }
+            catch (HttpRequestException ex)
+            {
+                var errorMessage = $"There was an error processing your request. Can you please rephrase the question again!";
+
+                _discourse.Add(new Conversation
+                {
+                    ActorName = "Wise-AI",
+                    ActorType = ActorType.AiBot,
+                    Message = errorMessage,
+                    Time = DateTime.Now,
+                    IsError = true
+                });
+                await SaveCurrentChat();
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"An unexpected error occurred. Try again later";
+
+                _discourse.Add(new Conversation
+                {
+                    ActorName = "Wise-AI",
+                    ActorType = ActorType.AiBot,
+                    Message = errorMessage,
+                    Time = DateTime.Now,
+                    IsError = true
+                });
+                await SaveCurrentChat();
+            }
+            finally
+            {
+                if (_isLoading)
+                {
+                    _isLoading = false;
+                    await InvokeAsync(StateHasChanged);
+                }
+                await GenerateRecommendedQuestions();
+                _isTfDisabled = false;
+                await InvokeAsync(StateHasChanged);
+                if (!_isTfDisabled)
+                {
+                    await _refEntryField!.Clear();
+                    await _refEntryField!.FocusAsync();
+                }
+                await ScrollToBottom();
+            }
+        }
+    }
+
+
+    private void ShowPopover(string chatId)
+    {
+        _openPopoverId = chatId;
+        StateHasChanged();
+    }
+
+    private void HidePopover()
+    {
+        _openPopoverId = null;
+        StateHasChanged();
+    }
+
+    private async Task DeleteChat(string chatId)
+    {
+        try
+        {
+            await WiseAI.DeleteChatAsync(chatId);
+            await LoadRecentChats();
+            if (_currentChatId == chatId)
+            {
+                _discourse.Clear();
+                _hasFirstQuery = false;
+                _currentLayout = "search"; // Switch back to search interface
+                _currentChatId = null;
+                await RestartAi();
+            }
+            Snackbar.Add("Chat deleted successfully!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting chat: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _openPopoverId = null;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+
+    private async Task<string> ProcessFunctionRouterResponse(FunctionRouterResponse jsonResponse, string userMessage)
+    {
+
+
+        if (jsonResponse?.Results != null && jsonResponse.Results.Count > 0)
+
+        {
+
+            var chartDataJson = jsonResponse.Results[0];
+
+            var rawChartData = JsonConvert.DeserializeObject<dynamic>(chartDataJson);
+
+
+
+            var combinedContent = $"Don't do any further analysis just create a 1 line summary. Use User Query and Response data to get only one line summary of the Response Data based on the User Query. User Query: {userMessage}\n\nResponse Data: {chartDataJson}";
+
+
+
+
+
+            if (rawChartData.type == "pie_chart")
+
+            {
+
+                var chartData = new ChartData();
+
+                foreach (var chart in rawChartData.data)
+
+                {
+
+                    chartData.Charts.Add(new Chart
+
+                    {
+
+                        ChartName = chart.chart_name,
+
+                        InputData = ((JArray)chart.InputData).ToObject<List<int>>(),
+
+                        InputLabels = ((JArray)chart.InputLabels).ToObject<List<string>>()
+
+                    });
+
+                }
+
+
+
+                return await WiseAI.GetResponseAsync(_wiseAIThreadId, combinedContent);
+
+            }
+            // Add other chart type handlers similarly
+
+        }
+
+
+
+        return "Unable to process the response.";
+
+    }
+
+
+
+    private async Task GenerateRecommendedQuestions()
+
+    {
+
+        Console.WriteLine("GenerateRecommendedQuestions() called");
+
+
+
+        _recommendedQuestions = await WiseAI.GetRecommendedQuestionsAsync(_wiseAIThreadId);
+
+
+
+        if (_recommendedQuestions != null)
+
+        {
+
+            Console.WriteLine($"Questions count: {_recommendedQuestions.Count}");
+
+        }
+
+        else
+
+        {
+
+            Console.WriteLine("Parsed questions list is null.");
+
+        }
+
+
+
+        StateHasChanged();
+
+    }
+
+
+
+    private async Task SelectRecommendedQuestion(string question)
+
+    {
+
+        _currentMessage = question;
+
+        _recommendedQuestions.Clear();
+
+        StateHasChanged();
+
+    }
+
+    private async Task AddAiContentToChat(string response)
+
+    {
+
+        var conversation = new Conversation
+
+        {
+
+            ActorName = "Wise-AI",
+
+            ActorType = ActorType.AiBot,
+
+            Message = response, // Directly set the full response here
+
+            Time = DateTime.Now
+
+        };
+
+
+
+        _discourse.Add(conversation);
+
+
+
+        _currentStreamingConversation = null; // No streaming involved
+
+        _currentMessage = string.Empty; // Clear the input field
+
+        StateHasChanged();
+
+
+
+        await ScrollToBottom();
+
+    }
+
+
+
+    private async Task AddAiContentToChat(string response = null, ChartData chartData = null, TableData tableData = null, BarChartData barChartData = null, List<ActionResolution> actDialogActions = null, Component actDialogComponent = null)
+
+    {
+
+        _discourse.Add(new Conversation
+
+        {
+
+            ActorName = "Wise-AI",
+
+            ActorType = ActorType.AiBot,
+
+            Message = response,
+
+            Time = DateTime.Now,
+
+            ChartData = chartData,
+
+            TableData = tableData,
+
+            BarChartData = barChartData,
+
+            ActDialogActions = actDialogActions,
+
+            ActDialogComponent = actDialogComponent
+
+        });
+
+
+
+        await InvokeAsync(StateHasChanged);
+
+        await ScrollToBottom();
+
+    }
+
+
+
+    private async Task CheckEnter(KeyboardEventArgs e)
+
+    {
+
+        if (e.Key == "Enter" || e.Code == "NumpadEnter")
+
+        {
+
+            if (!_hasFirstQuery)
+
+            {
+
+                await SubmitFirstQuery();
+
+            }
+
+            else
+
+            {
+
+                await SubmitAsync();
+
+            }
+
+        }
+
+    }
+
+
+
+    private async Task ResetDialog()
+
+    {
+
+        _discourse.Clear();
+
+        _hasFirstQuery = false;
+
+        _currentLayout = "search"; // Switch back to search interface
+
+        _currentChatId = null;
+
+        StateHasChanged();
+
+        await RestartAi();
+
+    }
+
+
+
+    private async Task SendFeedback()
+    {
+        var parameters = new DialogParameters<FeedBackForm>();
+        parameters.Add("Discourse", Discourse);
+        DialogOptions maxWidth = new DialogOptions() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+        await DialogService.ShowAsync<FeedBackForm>("Send Feedback", parameters, maxWidth);
+
+    }
+
+    private async Task AutoSubmitQuery(string question)
+
+    {
+        _currentMessage = question;
+        await SubmitFirstQuery();
+        // Add this to ensure the question is processed after transition
+        if (_hasFirstQuery)
+
+        {
+            await SubmitAsync();
+        }
+        _currentMessage = string.Empty; // Clear the input field
+
+    }
+
+    private async Task AutoSubmitRecommendedQuestion(string question)
+
+    {
+        // Set the selected question as the current message
+        _currentMessage = question;
+        // Trigger the method that submits the query (e.g., SubmitAsync or SubmitQuery)
+        await SubmitAsync();
+        _currentMessage = string.Empty; // Clear the input field
+    }
+
+
+    private async Task AskPopularQuery(string query)
+
+    {
+
+        _currentMessage = query;
+
+        await SubmitAsync();
+
+    }
+
+    private string GetRelativeTime(DateTime dateTime)
+    {
+        // Convert the UTC time from the database to the server's local time
+        var localTime = dateTime.ToLocalTime();
+        var timeSpan = DateTime.Now - localTime;
+
+        if (timeSpan.TotalMinutes < 1) return "Just now";
+        if (timeSpan.TotalMinutes < 60) return $"{(int)timeSpan.TotalMinutes} minutes ago";
+        if (timeSpan.TotalHours < 24) return $"{(int)timeSpan.TotalHours} hours ago";
+        if (timeSpan.TotalDays < 2) return "Yesterday";
+
+        // For older dates, show the local time
+        return localTime.ToString("h:mm tt");
+    }
+
+    private void SwitchApp(int appIndex)
+    {
+        _selectedAppIndex = appIndex;
+        StateHasChanged();
+    }
+
+}
+
+
+
+
+/// wise chat frontend 
+
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using Microsoft.Extensions.Configuration;
+using Wise_Ultima.Models;
+
+namespace Wise_Ultima.Services
+{
+    public class WiseAI
+    {
+        private readonly HttpClient _httpClient;
+        private readonly string _apiBaseUrl;
+
+        public WiseAI(HttpClient httpClient, IConfiguration configuration)
+        {
+            _httpClient = httpClient;
+            _apiBaseUrl = configuration["OpenAI:ApiBaseUrl"];
+        }
+
+        public async Task<string> Initialize(Agent agent)
+        {
+            var response = await _httpClient.PostAsJsonAsync($"{_apiBaseUrl}/api/WiseAI/initialize", agent);
+            var result = await response.Content.ReadFromJsonAsync<ResponseModel>();
+            return result?.ThreadId ?? "Error initializing AI";
+        }
+
+        public async Task<string> GetResponseAsync(string threadId, string userPrompt)
+        {
+            var request = new ChatRequest
+            {
+                ThreadId = threadId,
+                UserPrompt = userPrompt
+            };
+
+            var response = await _httpClient.PostAsJsonAsync($"{_apiBaseUrl}/api/WiseAI/chat", request);
+            Console.WriteLine($"Chat API status: {response.StatusCode}");
+            var rawJson = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Raw Chat API response: {rawJson}");
+
+            var result = await response.Content.ReadFromJsonAsync<ResponseModel>();
+            return result?.Response ?? "Error retrieving AI response";
+        }
+        public async Task<List<string>> GetRecommendedQuestionsAsync(string threadId)
+        {
+            var response = await _httpClient.GetFromJsonAsync<ResponseModel>($"{_apiBaseUrl}/api/WiseAI/Recommended-questions/{threadId}");
+            return response?.Questions ?? new List<string>();
+        }
+
+
+
+        public async Task DeleteChatAsync(string chatId)
+        {
+            var response = await _httpClient.DeleteAsync($"{_apiBaseUrl}/api/WiseAI/chat/{chatId}");
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"Failed to delete chat: {response.StatusCode}");
+            }
+        }
+
+        public async Task SaveChatAsync(Chat chat)
+        {
+            var response = await _httpClient.PostAsJsonAsync($"{_apiBaseUrl}/api/WiseAI/save-chat", chat);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException($"Failed to save chat: {response.StatusCode}");
+            }
+        }
+
+    }
+    public class ResponseModel
+    {
+        public string ThreadId { get; set; }
+        public string Response { get; set; }
+        public List<string> Questions { get; set; }
+        public string Status { get; set; } // Add as string to avoid enum parsing issues
+    }
+    public class ChatRequest
+    {
+        public string ThreadId { get; set; }
+        public string UserPrompt { get; set; }
+    }
+}
+
+
+// Backned service 
+
+using Microsoft.JSInterop;
+using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using System.Net.Http;
+using System.Net.Http.Json;
+using OpenAI.Assistants;
+using Wise_Ultima.Models;
+using System.Text;
+using MongoDB.Driver;
+using MongoDB.Bson;
+
+namespace Wise_Ultima.Services
+{
+    public class WiseAI
+    {
+        private readonly HttpClient _httpClient;
+        private readonly IConfiguration _configuration;
+        private readonly string _apiKey;
+        private AssistantResponse _assistant;
+        private static readonly Dictionary<string, ThreadResponse> _threads = new();
+        private readonly IMongoCollection<Chat> _chatsCollection;
+
+        public WiseAI(HttpClient httpClient, IConfiguration configuration)
+        {
+            _httpClient = httpClient;
+            _configuration = configuration;
+            _apiKey = configuration["OpenAI:ApiKey"];
+            _httpClient.BaseAddress = new Uri("https://api.openai.com/v1/");
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+            _httpClient.DefaultRequestHeaders.Add("OpenAI-Beta", "assistants=v2");
+
+            // MongoDB setup for chat persistence
+            var mongoClient = new MongoClient(configuration["MongoDBSettings:ConnectionString"]);
+            var database = mongoClient.GetDatabase(configuration["MongoDBSettings:DatabaseName"]);
+            _chatsCollection = database.GetCollection<Chat>("chats");
+        }
+
+        public async Task<string> Initialized(Agent agent)
+        {
+            try
+            {
+                Console.WriteLine($"Fetching assistant with ID: {agent.AssistantId}");
+
+                // Fetch the assistant
+                var response = await _httpClient.GetAsync($"assistants/{agent.AssistantId}");
+                Console.WriteLine($"Assistant fetch response status: {response.StatusCode}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Assistant fetch error: {errorContent}");
+                    return $"Error fetching assistant: {errorContent}";
+                }
+
+                _assistant = await response.Content.ReadFromJsonAsync<AssistantResponse>();
+                Console.WriteLine($"Assistant fetched successfully: {_assistant?.Id}");
+
+                // Create a new thread
+                Console.WriteLine("Creating a new thread...");
+                var threadResponse = await _httpClient.PostAsync("threads", new StringContent("{}", Encoding.UTF8, "application/json"));
+                Console.WriteLine($"Thread creation response status: {threadResponse.StatusCode}");
+
+                if (!threadResponse.IsSuccessStatusCode)
+                {
+                    var errorContent = await threadResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Thread creation error: {errorContent}");
+                    return $"Error creating thread: {errorContent}";
+                }
+
+                var thread = await threadResponse.Content.ReadFromJsonAsync<ThreadResponse>();
+
+                if (thread != null)
+                {
+                    Console.WriteLine($"Thread created successfully: {thread.Id}");
+                    _threads.Add(thread.Id, thread); // Ensure the thread is added to the dictionary
+                    return thread.Id;
+                }
+
+                Console.WriteLine("Error: Thread creation failed.");
+                return "Error creating thread";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error initializing AI session: {ex.Message}");
+                return "Error Initializing AI Session";
+            }
+        }
+
+
+        public async Task<string> RunAndGetResponse(string threadId, string userPrompt)
+        {
+            try
+            {
+                Console.WriteLine($"Running chat for thread ID: {threadId}");
+
+                if (!_threads.ContainsKey(threadId))
+                {
+                    Console.WriteLine("Error: Invalid thread ID");
+                    return "Invalid thread ID";
+                }
+
+                // Send user message
+                Console.WriteLine("Sending user message...");
+                var messageContent = new { role = "user", content = userPrompt };
+                var jsonMessageContent = JsonSerializer.Serialize(messageContent);
+                Console.WriteLine($"Sending JSON payload: {jsonMessageContent}");
+                var messageResponse = await _httpClient.PostAsync($"threads/{threadId}/messages", new StringContent(jsonMessageContent, Encoding.UTF8, "application/json"));
+                Console.WriteLine($"Message response status: {messageResponse.StatusCode}");
+
+                if (!messageResponse.IsSuccessStatusCode)
+                {
+                    var errorContent = await messageResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Message error: {errorContent}");
+                    return $"Error sending message: {errorContent}";
+                }
+
+                // Create a run
+                Console.WriteLine("Creating a run...");
+                var runContent = new { assistant_id = "asst_cHJIUvqUoB8lH7z61bZV3cnq" };
+                var jsonRunContent = JsonSerializer.Serialize(runContent);
+                Console.WriteLine($"Sending JSON payload: {jsonRunContent}");
+                var runResponse = await _httpClient.PostAsync($"threads/{threadId}/runs", new StringContent(jsonRunContent, Encoding.UTF8, "application/json"));
+                Console.WriteLine($"Run response status: {runResponse.StatusCode}");
+
+                if (!runResponse.IsSuccessStatusCode)
+                {
+                    var errorContent = await runResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Run error: {errorContent}");
+                    return $"Error creating run: {errorContent}";
+                }
+
+                var rawJson = await runResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"Raw run response: {rawJson}");
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var run = JsonSerializer.Deserialize<RunResponse>(rawJson, options);
+
+                if (run == null || string.IsNullOrEmpty(run.Id))
+                {
+                    Console.WriteLine("Error: Run object is null or ID is empty.");
+                    return "Error: Run creation failed.";
+                }
+
+                Console.WriteLine($"Run created successfully: {run.Id}, Status: {run.Status}");
+
+                // Poll run status
+                while (run.Status == "in_progress" || run.Status == "queued" || run.Status == "cancelling")
+                {
+                    Console.WriteLine($"Run status: {run.Status}");
+                    await Task.Delay(250);
+                    var statusResponse = await _httpClient.GetAsync($"threads/{threadId}/runs/{run.Id}");
+                    rawJson = await statusResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Raw status response: {rawJson}");
+                    run = JsonSerializer.Deserialize<RunResponse>(rawJson, options);
+                }
+
+                Console.WriteLine($"Run completed with status: {run.Status}");
+
+                if (run.Status != "completed")
+                {
+                    Console.WriteLine($"Run failed with status: {run.Status}");
+                    return $"Run failed with status: {run.Status}";
+                }
+
+                // Fetch messages
+                Console.WriteLine("Fetching messages...");
+                var messagesResponse = await _httpClient.GetAsync($"threads/{threadId}/messages");
+                Console.WriteLine($"Messages response status: {messagesResponse.StatusCode}");
+
+                if (!messagesResponse.IsSuccessStatusCode)
+                {
+                    var errorContent = await messagesResponse.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Messages error: {errorContent}");
+                    return $"Error fetching messages: {errorContent}";
+                }
+
+                var messagesRawJson = await messagesResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"Raw messages response: {messagesRawJson}");
+                var messageList = JsonSerializer.Deserialize<MessageListResponse>(messagesRawJson, options);
+
+                if (messageList?.Items.Count > 0) // Check for any messages, not > 1
+                {
+                    var assistantMessage = messageList.Items.FirstOrDefault(m => m.Role == "assistant");
+                    if (assistantMessage != null)
+                    {
+                        var response = assistantMessage.PrintContent();
+                        Console.WriteLine($"Assistant response: {response}");
+                        return response;
+                    }
+                    Console.WriteLine("No assistant message found");
+                    return "No assistant message found";
+                }
+
+                Console.WriteLine("No messages in the thread");
+                return "No messages in the thread";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving AI response: {ex.Message}");
+                return $"Error retrieving AI response: {ex.Message}";
+            }
+        }
+        public async Task<List<string>> GenerateRecommendedQuestions(string threadId)
+        {
+            try
+            {
+                if (!_threads.ContainsKey(threadId))
+                {
+                    return new List<string>();
+                }
+                var prompt = "Analyze the conversation history from the user's perspective. Generate 3 diverse, highly relevant follow-up questions the user would likely ask next, based on their interests, needs, and the conversation context. Ensure a balanced mix of: 1. Data insight questions (only when contextually appropriate) such as: 'At what time did the most incidents occur on a specific date?', 'What's the overall health of all my systems in a graph?', 'What systems have high/low CPU usage?', 'Which systems have low memory/disk usage?', 'What systems show the 'Data Metric Missing' error?'. 2. General product usage or feature-related questions (e.g., 'How do I set up a new alert?', 'Can I customize the dashboard layout?'). 3. Questions about best practices, troubleshooting, or system optimization (e.g., 'What's the recommended way to reduce incident frequency?', 'How can I improve my system's overall performance?'). Do not focus solely on data insights; aim for variety. Ensure all questions: Are in first-person, sound natural for the user to ask, follow the conversation flow, seek valuable information, and avoid using 'visual' or 'visualization'. Return only the questions as a JSON array, without additional text or formatting. Each question should appear to come directly from the user to the AI assistant.";
+
+                var messageContent = new { role = "user", content = prompt };
+                await _httpClient.PostAsJsonAsync($"threads/{threadId}/messages", messageContent);
+
+                var runContent = new { assistant_id = _assistant.Id };
+                var runResponse = await _httpClient.PostAsJsonAsync($"threads/{threadId}/runs", runContent);
+                var run = await runResponse.Content.ReadFromJsonAsync<RunResponse>();
+
+                while (run.Status == "in_progress" || run.Status == "queued")
+                {
+                    await Task.Delay(250);
+                    var statusResponse = await _httpClient.GetAsync($"threads/{threadId}/runs/{run.Id}");
+                    run = await statusResponse.Content.ReadFromJsonAsync<RunResponse>();
+                }
+
+                var messageResponse = await _httpClient.GetAsync($"threads/{threadId}/messages");
+                var messageList = await messageResponse.Content.ReadFromJsonAsync<MessageListResponse>();
+
+                if (messageList?.Items.Count > 0)
+                {
+                    var response = messageList.Items.First().PrintContent();
+                    return ParseRecommendations(response);
+                }
+                return new List<string>();
+            }
+            catch (Exception ex)
+            {
+                return new List<string>();
+            }
+        }
+        private List<string> ParseRecommendations(string response)
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<List<string>>(response) ?? new List<string>();
+            }
+            catch (JsonException)
+            {
+                return response.Split('\n')
+                    .Where(line => line.Trim().StartsWith("1.") || line.Trim().StartsWith("2.") || line.Trim().StartsWith("3."))
+                    .Select(line => line.Substring(line.IndexOf('.') + 1).Trim())
+                    .ToList();
+            }
+        }
+
+        // New methods for chat management using MongoDB
+        public async Task SaveChatAsync(Chat chat)
+        {
+            if (string.IsNullOrEmpty(chat.ChatId))
+            {
+                chat.ChatId = Guid.NewGuid().ToString();
+                chat.CreatedAt = DateTime.UtcNow;
+                await _chatsCollection.InsertOneAsync(chat);
+            }
+            else
+            {
+                chat.UpdatedAt = DateTime.UtcNow; // Set only on update
+                var filter = Builders<Chat>.Filter.Eq(c => c.ChatId, chat.ChatId);
+                await _chatsCollection.ReplaceOneAsync(filter, chat, new ReplaceOptions { IsUpsert = true });
+            }
+        }
+
+        public async Task<List<Chat>> GetRecentChatAsync(string userId)
+        {
+            var filter = Builders<Chat>.Filter.Eq(c => c.UserId, userId);
+            var sort = Builders<Chat>.Sort.Descending(c => c.UpdatedAt != null ? c.UpdatedAt : c.CreatedAt);
+            return await _chatsCollection.Find(filter).Sort(sort).ToListAsync(); // Limit to recent 20
+        }
+
+        public async Task<Chat> GetChatByIdAsync(string chatId)
+        {
+            var filter = Builders<Chat>.Filter.Eq(c => c.ChatId, chatId);
+            return await _chatsCollection.Find(filter).FirstOrDefaultAsync();
+        }
+
+        public async Task DeleteChatAsync(string chatId)
+        {
+            var filter = Builders<Chat>.Filter.Eq(c => c.ChatId, chatId);
+            await _chatsCollection.DeleteOneAsync(filter);
+        }
+    }
+    public class RunResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string Status { get; set; }
+    }
+
+    public class MessageListResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public List<MessageResponse> Data { get; set; } = new();
+        public List<MessageResponse> Items => Data; // Alias for compatibility
+    }
+
+    public class MessageResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("role")]
+        public string Role { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("content")]
+        public List<ContentItem> Content { get; set; }
+
+        public string PrintContent() => Content?.FirstOrDefault(c => c.Type == "text")?.Text?.Value ?? "";
+    }
+
+    public class ContentItem
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("text")]
+        public TextContent Text { get; set; }
+    }
+
+    public class TextContent
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        public string Value { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("annotations")]
+        public List<object> Annotations { get; set; }
+    }
+
+    public class AssistantResponse
+    {
+        public string Id { get; set; }
+        //public string Name { get; set; }
+        //public string Model { get; set; }
+        //public string Instructions { get; set; }
+        //public List<string> Tools { get; set; } = new();
+    }
+
+    public class ThreadResponse
+    {
+        public string Id { get; set; }
+        public string Object { get; set; }
+        public long CreatedAt { get; set; }
+        public string Status { get; set; }
+    }
+
+    public enum RunStatus
+    {
+        Queued,
+        InProgress,
+        Completed,
+        Failed,
+        Cancelled,
+        RequiresAction,  // Added
+        Expired,         // Added
+        Cancelling,      // Added
+        Incomplete       // Added
+    }
+}
+
+// controller.cs
+
+using Microsoft.AspNetCore.Mvc;
+using Wise_Ultima.Models;
+using Wise_Ultima.Services;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
+
+namespace Wise_Ultima.Controllers
+{
+   
+    [ApiController]
+    [Route("api/[controller]")]
+   
+    public class WiseAIController : ControllerBase
+    {
+        private readonly WiseAI _wiseAI;
+
+        public WiseAIController(WiseAI wiseAI)
+        {
+            _wiseAI = wiseAI ?? throw new ArgumentNullException(nameof(wiseAI));
+        }
+
+      
+        [HttpPost("initialize")]
+        public async Task<IActionResult> Initialize([FromBody][Required] Agent agent)
+        {
+            if (!ModelState.IsValid || string.IsNullOrEmpty(agent?.AssistantId))
+            {
+                return BadRequest(new { error = "Invalid or missing assistant ID" });
+            }
+
+            var threadId = await _wiseAI.Initialized(agent);
+            if (threadId.StartsWith("Error"))
+            {
+                return StatusCode(500, new { error = threadId });
+            }
+
+            return Ok(new { threadId });
+        }
+
+     
+        [HttpPost("chat")]
+        public async Task<IActionResult> GetChatResponse([FromBody][Required] ChatRequest request)
+        {
+            if (!ModelState.IsValid || string.IsNullOrEmpty(request?.ThreadId) || string.IsNullOrEmpty(request?.UserPrompt))
+            {
+                return BadRequest(new { error = "Thread ID and user prompt are required" });
+            }
+
+            var response = await _wiseAI.RunAndGetResponse(request.ThreadId, request.UserPrompt);
+            if (response.StartsWith("Error") || response.Contains("Invalid") || response.Contains("No assistant message") || response.Contains("No messages"))
+            {
+                return BadRequest(new { error = response });
+            }
+
+            return Ok(new { response });
+        }
+
+        
+        [HttpGet("recommended-questions/{threadId}")]
+        public async Task<IActionResult> GetRecommendedQuestions([FromRoute] string threadId)
+        {
+            if (string.IsNullOrEmpty(threadId))
+            {
+                return BadRequest(new { error = "Thread ID is required" });
+            }
+
+            var questions = await _wiseAI.GenerateRecommendedQuestions(threadId);
+            if (questions == null || questions.Count == 0)
+            {
+                return Ok(new { questions = new List<string>() });
+            }
+
+            return Ok(new { questions });
+        }
+
+      
+        [HttpPost("chat/save")]
+        public async Task<IActionResult> SaveChat([FromBody][Required] Chat chat)
+        {
+            if (!ModelState.IsValid || string.IsNullOrEmpty(chat?.UserId))
+            {
+                return BadRequest(new { error = "Invalid chat data or missing user ID" });
+            }
+
+            // Ensure UserId matches authenticated user (if applicable)
+            var currentUserId = User?.Identity?.Name; // Adjust based on auth mechanism
+            if (!string.IsNullOrEmpty(currentUserId) && chat.UserId != currentUserId)
+            {
+                return Unauthorized(new { error = "Cannot save chat for another user" });
+            }
+
+            await _wiseAI.SaveChatAsync(chat);
+            return Ok(new { chatId = chat.ChatId, message = "Chat saved successfully" });
+        }
+
+      
+        [HttpGet("chats/recent")]
+        public async Task<IActionResult> GetRecentChats()
+        {
+            var userId = User?.Identity?.Name; // Adjust based on auth mechanism
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { error = "User authentication required" });
+            }
+
+            var chats = await _wiseAI.GetRecentChatAsync(userId);
+            return Ok(new { chats });
+        }
+
+
+        [HttpGet("chat/{chatId}")]
+        public async Task<IActionResult> GetChatById([FromRoute] string chatId)
+        {
+            if (string.IsNullOrEmpty(chatId))
+            {
+                return BadRequest(new { error = "Chat ID is required" });
+            }
+
+            var chat = await _wiseAI.GetChatByIdAsync(chatId);
+            if (chat == null)
+            {
+                return NotFound(new { error = "Chat not found" });
+            }
+
+            // Verify user ownership
+            var currentUserId = User?.Identity?.Name;
+            if (!string.IsNullOrEmpty(currentUserId) && chat.UserId != currentUserId)
+            {
+                return Unauthorized(new { error = "Access to chat denied" });
+            }
+
+            return Ok(new { chat });
+        }
+
+        /// <summary>
+        /// Deletes a specific chat by ID.
+        /// </summary>
+        /// <param name="chatId">The ID of the chat to delete.</param>
+        /// <returns>Success message.</returns>
+        [HttpDelete("chat/{chatId}")]
+        public async Task<IActionResult> DeleteChat([FromRoute] string chatId)
+        {
+            if (string.IsNullOrEmpty(chatId))
+            {
+                return BadRequest(new { error = "Chat ID is required" });
+            }
+
+            var chat = await _wiseAI.GetChatByIdAsync(chatId);
+            if (chat == null)
+            {
+                return NotFound(new { error = "Chat not found" });
+            }
+
+            // Verify user ownership
+            var currentUserId = User?.Identity?.Name;
+            if (!string.IsNullOrEmpty(currentUserId) && chat.UserId != currentUserId)
+            {
+                return Unauthorized(new { error = "Cannot delete another user's chat" });
+            }
+
+            await _wiseAI.DeleteChatAsync(chatId);
+            return Ok(new { message = "Chat deleted successfully" });
+        }
+    }
+
+    /// <summary>
+    /// Request model for chat interactions.
+    /// </summary>
+    public class ChatRequest
+    {
+        [Required]
+        public string ThreadId { get; set; }
+        [Required]
+        public string UserPrompt { get; set; }
+    }
+}
+

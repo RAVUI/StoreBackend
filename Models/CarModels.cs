@@ -1,38 +1,34 @@
-﻿
-using Supabase.Postgrest.Models;
+﻿// CartModels.cs
+
 using Supabase.Postgrest.Attributes;
+using Supabase.Postgrest.Models;
 
 namespace Store.Models;
 
-[Table("cart_items")]
-public class CartItem : BaseModel
+[Table("carts")]
+public class Cart : BaseModel
 {
     [PrimaryKey("id", false)]
     [Column("id")]
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
+
     [Column("user_id")]
-    public string UserId { get; set; }
-    [Column("user_email")]
-    public string UserEmail { get; set; }
-    [Column("product_id")]
-    public string ProductId { get; set; }
-    [Column("product_name")]
-    public string ProductName { get; set; }
-    [Column("description")]
-    public string Description { get; set; }
-    [Column("image_base64")]
-    public string ImageBase64 { get; set; }
-    [Column("price")]
-    public decimal Price { get; set; }
-    [Column("quantity")]
+    public string UserId { get; set; } = string.Empty;
+
+    [Column("items")]
+    public string ItemsJson { get; set; } = "[]";
+}
+
+// Only store minimal data in cart
+public class CartItemSimple
+{
+    public string ProductId { get; set; } = string.Empty;
     public int Quantity { get; set; }
-    [Column("added_at")]
-    public DateTime AddedAt { get; set; }
 }
 
 public class CreateCartItemDto
 {
-    public string ProductId { get; set; }
+    public string ProductId { get; set; } = string.Empty;
     public int Quantity { get; set; }
 }
 
@@ -41,16 +37,12 @@ public class UpdateCartItemDto
     public int Quantity { get; set; }
 }
 
-public class CartItemDto
+// Response DTO - only what you asked for
+public class CartItemResponseDto
 {
-    public string Id { get; set; }
-    public string ProductId { get; set; }
-    public string ProductName { get; set; }
-    public string Description { get; set; }
-    public string ImageBase64 { get; set; }
+    public string ProductId { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public string ImageBase64 { get; set; } = string.Empty;
     public int Quantity { get; set; }
-    public string UserEmail { get; set; }
-    public DateTime AddedAt { get; set; }
-    public decimal TotalPrice { get; set; }
 }

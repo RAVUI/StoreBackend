@@ -1,0 +1,370 @@
+@page "/pages/WiseManageUsers"
+@layout Layout.PrimaryLayout
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Authorization
+@using Wise_Ultima.Models
+@using Wise_Ultima.Services
+@using Wise_Ultima.Shared
+@using System.Text.RegularExpressions
+@using Blazored.LocalStorage
+@inject ILocalStorageService LocalStorage
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject ILogger<WiseManageUsers> Logger
+@implements IDisposable
+@inject IJSRuntime JSRuntime
+@inject AuthService AuthService
+@inject IAuditLogService AuditLogService
+<PageTitle>Manage Users</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-4">
+    <MudText Typo="Typo.h5" Class="mb-4"><b>Manage Users</b></MudText>
+
+    <MudTextField T="string" Placeholder="Search by Email"
+                  @bind-Value="_searchString" Immediate="true"
+                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                  IconSize="Size.Medium" Class="searchbar"
+                  DisableUnderLine="true"
+                  DebounceInterval="300"
+                  OnDebounceIntervalElapsed="@(() => _table.ReloadServerData())"
+                  FullWidth="true" />
+
+    <MudTable ServerData="@(new Func<TableState, Task<TableData<PaginatedUser>>>(ServerReload))"
+              Dense="true" Hover="true" @ref="_table" FixedHeader="true" FixedFooter="true"
+              Height="auto" Loading="@_loading" LoadingProgressColor="Color.Info"
+              Elevation="2" Class="mt-4">
+        <HeaderContent>
+            <MudTh>
+                <MudTableSortLabel SortLabel="email" T="PaginatedUser" @bind-SortDirection="_sortDirection">
+                    <MudText Typo="Typo.body2"><strong>Email</strong></MudText>
+                </MudTableSortLabel>
+            </MudTh>
+            <MudTh><MudText Typo="Typo.body2"><strong>Role</strong></MudText></MudTh>
+            <MudTh><MudText Typo="Typo.body2"><strong>Actions</strong></MudText></MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd DataLabel="Email">
+                <MudText Typo="Typo.body2">@context.Email</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@GetFormattedUsername(context.Email)</MudText>
+            </MudTd>
+            <MudTd DataLabel="Role">
+                <MudStack Row="true" Spacing="2" Style="flex-wrap: wrap;">
+                    @if (!string.IsNullOrEmpty(context.Role))
+                    {
+                        <MudTooltip Text="@context.Role" Placement="Placement.Top" Animation="Animation" Duration="300" Arrow="true" Color="Color.Tertiary">
+                            <MudAvatar Size="Size.Medium" Style="width: 30px; height: 30px; font-size: 0.85rem; background: linear-gradient(140.08deg, rgba(0, 149, 218, 0.5) 17.57%, rgba(169, 16, 207, 0.5) 93.17%); color: white;">
+                                @context.Role.Substring(0, 1).ToUpper()
+                            </MudAvatar>
+                        </MudTooltip>
+                    }
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudStack Row="true" Spacing="2">
+                    <MudButton StartIcon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                               Style="background: linear-gradient(90deg, #0095DA 0%, #A910CF 100%); color: white; border-radius: 5px; padding: 5px 13px;"
+                               OnClick="@(() => OpenEditRolesDialog(context))">Edit</MudButton>
+                    <MudButton StartIcon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                               Style="background: var(--Critical, rgba(213, 26, 26, 1)); color: white; border-radius: 5px; padding: 5px 13px;"
+                               OnClick="@(() => ConfirmDeleteUser(context))">
+                        Delete
+                    </MudButton>
+                </MudStack>
+            </MudTd>
+        </RowTemplate>
+
+        <NoRecordsContent>
+            <img src="images/users_loader.gif" alt="Loading..." style="width: 75px; height: 75px;" />
+            <MudText Typo="Typo.body2">No users found...</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Class="pa-4">
+                <img src="images/users_loader.gif" alt="Loading..." style="width: 75px; height: 75px;" />
+                <MudText Typo="Typo.body2">Loading users...</MudText>
+            </MudStack>
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
+
+<style>
+    .mud-input-control > .mud-input-control-input-container > div.mud-input.mud-input-text {
+        margin: 0px !important;
+        padding: 6px !important;
+    }
+
+    .searchbar {
+        box-shadow: 0px 0px 10px 0px var(--shadows);
+        background: var(--10, rgba(18, 18, 18, 0.1));
+        border-radius: 10px;
+    }
+
+    .sort-icon {
+        display: none;
+    }
+
+    .mud-table-sort-label:hover .sort-icon {
+        display: inline-block;
+    }
+
+    .mud-table {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .mud-table-row {
+        transition: all 0.3s ease-in-out;
+    }
+
+        .mud-table-row:hover {
+            background-color: var(--mud-palette-background-grey);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+    .mud-table-cell {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .mud-avatar {
+        transition: all 0.3s ease-in-out;
+    }
+
+        .mud-avatar:hover {
+            transform: scale(1.1);
+        }
+</style>
+
+@code {
+    private MudTable<PaginatedUser> _table;
+    private string _searchString = "";
+    private SortDirection _sortDirection = SortDirection.Ascending;
+    private bool _loading = false;
+    private const string DEFAULT_ROLE = "User";
+
+    // Removed _userRoles, _isInitialized, OnInitializedAsync (trigger handles defaults)
+
+    private string GetFormattedUsername(string email)
+    {
+        if (string.IsNullOrEmpty(email) || !email.Contains('@'))
+            return email;
+
+        string username = email.Split('@')[0];
+        if (string.IsNullOrEmpty(username))
+            return email;
+
+        return string.Join(" ", username.Split('.')
+            .Select(part => !string.IsNullOrEmpty(part)
+                ? char.ToUpper(part[0]) + (part.Length > 1 ? part.Substring(1) : "")
+                : ""));
+    }
+
+  
+  
+        private async Task<TableData<PaginatedUser>> ServerReload(TableState state)
+        {
+            try
+            {
+                _loading = true;
+                StateHasChanged();
+                _sortDirection = state.SortDirection;
+                var search = string.IsNullOrEmpty(_searchString) ? "" : _searchString;
+                var (users, totalCount) = await AuthService.GetPaginatedUsers(state.Page + 1, state.PageSize, search, state.SortLabel ?? "email", _sortDirection == SortDirection.Ascending);
+                Logger.LogInformation($"Fetched {users.Count} users, TotalCount: {totalCount}");
+                return new TableData<PaginatedUser> { TotalItems = totalCount, Items = users };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading users");
+                Snackbar.Add($"Failed to load users: {ex.Message}", Severity.Error);
+                return new TableData<PaginatedUser> { TotalItems = 0, Items = new List<PaginatedUser>() };
+            }
+            finally
+            {
+                _loading = false;
+                StateHasChanged();
+            }
+        }
+    
+    private async Task OpenEditRolesDialog(PaginatedUser user)
+    {
+        try
+        {
+            var allRoles = new List<string> { "Admin", "User", "Manager", "Partner", "Client" };
+            var userRole = user.Role ?? DEFAULT_ROLE;
+
+            var parameters = new DialogParameters
+            {
+                ["User"] = user,
+                ["AllRoles"] = allRoles,
+                ["UserRole"] = userRole
+            };
+
+            var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+            var dialog = await DialogService.ShowAsync<EditUserRoleDialog>("Edit User Role", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is string newRole)
+            {
+                var success = await AuthService.UpdateUserRole(user.Id, newRole);
+                if (string.IsNullOrEmpty(newRole))
+                {
+                    newRole = DEFAULT_ROLE;
+                }
+
+                // Get current user details for logging
+                string currentUserId = "unknown";
+                string currentUserName = "unknown";
+                try
+                {
+                    var (userId, email, _) = await AuthService.GetUserDetails();
+                    currentUserId = userId ?? "unknown";
+                    currentUserName = GetFormattedUsername(email ?? "unknown@example.com");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to get current user details for audit logging");
+                }
+
+                var logEntry = new AuditLog
+                {
+                    UserId = currentUserId,
+                    UserName = currentUserName,
+                    Action = $"Updated role for user {GetFormattedUsername(user.Email)} to {newRole}",
+                    ActionCategory = "User Management",
+                    Details = $"User ID: {user.Id}, New Role: {newRole}",
+                    Success = success,
+                    ErrorMessage = success ? null : "Role update failed",
+                    Timestamp = DateTime.UtcNow
+                };
+
+                try
+                {
+                    await AuditLogService.LogActionAsync(logEntry);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to log role update action for user {UserEmail}", user.Email);
+                    Snackbar.Add("Role updated but audit log failed to save.", Severity.Warning);
+                }
+
+                if (success)
+                {
+                    user.Role = newRole;
+                    Snackbar.Add($"Role updated for {GetFormattedUsername(user.Email)}", Severity.Success);
+                    await _table.ReloadServerData();
+                }
+                else
+                {
+                    Logger.LogError("Failed to update role for {UserEmail}", user.Email);
+                    Snackbar.Add("Failed to update user role. Please try again.", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in OpenEditRolesDialog for user {UserEmail}", user.Email);
+            Snackbar.Add("An error occurred while editing user role. Please try again.", Severity.Error);
+        }
+    }
+
+    private async Task DeleteUser(PaginatedUser user)
+    {
+        try
+        {
+            var success = await AuthService.DeleteUser(user.Id);
+
+            // Get current user details for logging
+            string currentUserId = "unknown";
+            string currentUserName = "unknown";
+            try
+            {
+                var (userId, email, _) = await AuthService.GetUserDetails();
+                currentUserId = userId ?? "unknown";
+                currentUserName = GetFormattedUsername(email ?? "unknown@example.com");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to get current user details for audit logging");
+            }
+
+            var logEntry = new AuditLog
+            {
+                UserId = currentUserId,
+                UserName = currentUserName,
+                Action = $"Deleted user {GetFormattedUsername(user.Email)}",
+                ActionCategory = "User Management",
+                Details = $"Deleted a user email {user.Email}",
+                Success = success,
+                ErrorMessage = success ? null : "User deletion failed",
+                Timestamp = DateTime.UtcNow
+            };
+
+            try
+            {
+                await AuditLogService.LogActionAsync(logEntry);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to log delete action for user {UserEmail}", user.Email);
+                Snackbar.Add("User action completed but audit log failed to save.", Severity.Warning);
+            }
+
+            if (success)
+            {
+                Snackbar.Add($"User {GetFormattedUsername(user.Email)} deleted successfully", Severity.Success);
+                await _table.ReloadServerData();
+            }
+            else
+            {
+                Logger.LogError($"Failed to delete user {user.Id}");
+                Snackbar.Add("Failed to delete user.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting user {UserEmail}", user.Email);
+            Snackbar.Add("An error occurred while deleting the user. Please try again.", Severity.Error);
+        }
+    }
+
+    private async Task ConfirmDeleteUser(PaginatedUser user)
+    {
+        var parameters = new DialogParameters
+        {
+            ["ContentText"] = $"Are you sure you want to delete the user '{GetFormattedUsername(user.Email)}'?",
+            ["ButtonText"] = "Delete",
+            ["Color"] = Color.Error
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete User", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteUser(user);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    public void Dispose()
+    {
+        // Clean up resources if necessary
+    }
+
+   
+}

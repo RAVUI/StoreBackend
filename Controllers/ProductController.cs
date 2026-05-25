@@ -57,6 +57,7 @@ public class ProductController : ControllerBase
                 ImageBase64 = imageBase64,
                 Price = dto.Price,
                 InStock = dto.InStock,
+                Category = dto.Category,
                 PostedByEmail = userEmail,
                 PostedByUserId = userId,
                 PostedAt = DateTime.UtcNow
@@ -100,6 +101,9 @@ public class ProductController : ControllerBase
 
             if (!string.IsNullOrWhiteSpace(dto.Description))
                 existingProduct.Description = dto.Description;
+
+            if (!string.IsNullOrWhiteSpace(dto.Category))
+                existingProduct.Category = dto.Category;
 
             if (image != null && image.Length > 0)
             {
@@ -179,6 +183,7 @@ public class ProductController : ControllerBase
                 ImageBase64 = p.ImageBase64,
                 Price = p.Price,
                 InStock = p.InStock,
+                Category = p.Category,
                 PostedByEmail = p.PostedByEmail,
                 PostedAt = p.PostedAt
             }).ToList();

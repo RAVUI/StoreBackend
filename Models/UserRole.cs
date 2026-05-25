@@ -10,6 +10,8 @@ namespace Store.Models;
         [PrimaryKey("id")]
         [Column("id")]
         public Guid Id { get; set; }
+        [Column("name")]
+        public string Name { get; set; } = string.Empty;
         [Column("email")]
         public string Email { get; set; } = string.Empty;
         [Column("role")]

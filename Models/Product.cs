@@ -23,6 +23,9 @@ public class Product : BaseModel
     public string PostedByEmail { get; set; }
     [Column("posted_by_user_id")]
     public string PostedByUserId { get; set; }
+    [Column("category")]
+    public string Category { get; set; }
+
     [Column("posted_at")]
     public DateTime PostedAt { get; set; }
 }
@@ -31,9 +34,10 @@ public class CreateProductDto
 {
     public string ProductName { get; set; }
     public string Description { get; set; }
-    public string ImageBase64 { get; set; }
+    public string Category { get; set; }
     public decimal Price { get; set; }
     public bool InStock { get; set; }
+    public IFormFile Image { get; set; }
 }
 
 public class UpdateProductDto
@@ -41,6 +45,7 @@ public class UpdateProductDto
     public string ProductName { get; set; }
     public string Description { get; set; }
     public string ImageBase64 { get; set; }
+    public string Category { get; set; }
     public decimal Price { get; set; }
     public bool InStock { get; set; }
 }
@@ -51,6 +56,7 @@ public class ProductDto
     public string ProductName { get; set; }
     public string Description { get; set; }
     public string ImageBase64 { get; set; }
+    public string Category { get; set; }
     public decimal Price { get; set; }
     public bool InStock { get; set; }
     public string PostedByEmail { get; set; }

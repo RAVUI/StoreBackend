@@ -1,12 +1,12 @@
-﻿
+﻿// CartManagementController.cs
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Supabase;
 using System.Security.Claims;
-using System;
 using Store.Models;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Text.Json;
+using System.Linq;
 
 namespace Store.Controllers;
 
@@ -22,6 +22,23 @@ public class CartManagementController : ControllerBase
         _supabaseClient = supabaseClient;
     }
 
+    private async Task<Product?> GetProductById(string productId)
+    {
+        try
+        {
+            var response = await _supabaseClient
+                .From<Product>()
+                .Where(x => x.Id == productId)
+                .Single();
+
+            return response;
+        }
+        catch
+        {
+            return null; // Product not found or error
+        }
+    }
+
     [HttpPost]
     [Authorize(Roles = "user,Admin")]
     public async Task<IActionResult> AddToCart([FromBody] CreateCartItemDto dto)
@@ -32,59 +49,63 @@ public class CartManagementController : ControllerBase
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized("User ID is missing in the JWT token");
 
-            var userEmail = User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(userEmail))
-                return Unauthorized("Email claim is missing in the JWT token");
-
             if (string.IsNullOrEmpty(dto.ProductId))
                 return BadRequest(new { Message = "Product ID is required" });
 
             if (dto.Quantity <= 0)
                 return BadRequest(new { Message = "Quantity must be greater than 0" });
 
-            // Fetch the product
-            var product = await _supabaseClient.From<Product>()
-                .Where(x => x.Id == dto.ProductId)
-                .Single();
-
+            // Check if product exists
+            var product = await GetProductById(dto.ProductId);
             if (product == null)
                 return NotFound(new { Message = "Product not found" });
 
-            // Check if cart item already exists for this user and product
-            var existingCartItem = await _supabaseClient.From<CartItem>()
-                .Where(x => x.UserId == userId && x.ProductId == dto.ProductId)
+            var cart = await _supabaseClient.From<Cart>()
+                .Where(x => x.UserId == userId)
                 .Single();
 
-            if (existingCartItem != null)
+            List<CartItemSimple> items;
+            bool isNewCart = cart == null;
+
+            if (isNewCart)
             {
-                // Update quantity by adding the new quantity
-                existingCartItem.Quantity += dto.Quantity;
-                await _supabaseClient.From<CartItem>().Update(existingCartItem);
-                return Ok(new { Message = "Cart item quantity updated successfully", Id = existingCartItem.Id });
-            }
-            else
-            {
-                // Create new cart item
-                var cartItem = new CartItem
+                cart = new Cart
                 {
                     Id = Guid.NewGuid().ToString(),
                     UserId = userId,
-                    UserEmail = userEmail,
-                    ProductId = product.Id,
-                    ProductName = product.ProductName,
-                    Description = product.Description,
-                    ImageBase64 = product.ImageBase64,
-                    Price = product.Price,
-                    Quantity = dto.Quantity,
-                    AddedAt = DateTime.UtcNow
+                    ItemsJson = "[]"
                 };
-
-                var response = await _supabaseClient.From<CartItem>().Insert(cartItem);
-                if (response == null)
-                    return BadRequest(new { Message = "Failed to add to cart" });
-
-                return Ok(new { Message = "Added to cart successfully", Id = cartItem.Id });
+                items = new List<CartItemSimple>();
             }
+            else
+            {
+                items = string.IsNullOrEmpty(cart.ItemsJson) || cart.ItemsJson == "[]"
+                    ? new List<CartItemSimple>()
+                    : JsonSerializer.Deserialize<List<CartItemSimple>>(cart.ItemsJson) ?? new List<CartItemSimple>();
+            }
+
+            var existingItem = items.FirstOrDefault(i => i.ProductId == dto.ProductId);
+            if (existingItem != null)
+            {
+                existingItem.Quantity += dto.Quantity;
+            }
+            else
+            {
+                items.Add(new CartItemSimple
+                {
+                    ProductId = dto.ProductId,
+                    Quantity = dto.Quantity
+                });
+            }
+
+            cart.ItemsJson = JsonSerializer.Serialize(items);
+
+            if (isNewCart)
+                await _supabaseClient.From<Cart>().Insert(cart);
+            else
+                await _supabaseClient.From<Cart>().Update(cart);
+
+            return Ok(new { Message = "Added to cart successfully" });
         }
         catch (Exception ex)
         {
@@ -92,9 +113,9 @@ public class CartManagementController : ControllerBase
         }
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{productId}")]
     [Authorize(Roles = "user,Admin")]
-    public async Task<IActionResult> UpdateCartItem(string id, [FromBody] UpdateCartItemDto dto)
+    public async Task<IActionResult> UpdateCartItem(string productId, [FromBody] UpdateCartItemDto dto)
     {
         try
         {
@@ -102,26 +123,25 @@ public class CartManagementController : ControllerBase
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized("User ID is missing in the JWT token");
 
-            var userEmail = User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(userEmail))
-                return Unauthorized("Email claim is missing in the JWT token");
-
             if (dto.Quantity <= 0)
                 return BadRequest(new { Message = "Quantity must be greater than 0" });
 
-            var existingCartItem = await _supabaseClient.From<CartItem>()
-                .Where(x => x.Id == id)
+            var cart = await _supabaseClient.From<Cart>()
+                .Where(x => x.UserId == userId)
                 .Single();
 
-            if (existingCartItem == null)
-                return NotFound(new { Message = "Cart item not found" });
+            if (cart == null)
+                return NotFound(new { Message = "Cart not found" });
 
-            if (existingCartItem.UserId != userId)
-                return Unauthorized(new { Message = "You are not authorized to update this cart item" });
+            var items = JsonSerializer.Deserialize<List<CartItemSimple>>(cart.ItemsJson) ?? new List<CartItemSimple>();
 
-            existingCartItem.Quantity = dto.Quantity;
+            var item = items.FirstOrDefault(i => i.ProductId == productId);
+            if (item == null)
+                return NotFound(new { Message = "Item not found in cart" });
 
-            await _supabaseClient.From<CartItem>().Update(existingCartItem);
+            item.Quantity = dto.Quantity;
+            cart.ItemsJson = JsonSerializer.Serialize(items);
+            await _supabaseClient.From<Cart>().Update(cart);
 
             return Ok(new { Message = "Cart item updated successfully" });
         }
@@ -131,9 +151,9 @@ public class CartManagementController : ControllerBase
         }
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{productId}")]
     [Authorize(Roles = "user,Admin")]
-    public async Task<IActionResult> RemoveCartItem(string id)
+    public async Task<IActionResult> RemoveCartItem(string productId)
     {
         try
         {
@@ -141,23 +161,22 @@ public class CartManagementController : ControllerBase
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized("User ID is missing in the JWT token");
 
-            var userEmail = User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(userEmail))
-                return Unauthorized("Email claim is missing in the JWT token");
-
-            var existingCartItem = await _supabaseClient.From<CartItem>()
-                .Where(x => x.Id == id)
+            var cart = await _supabaseClient.From<Cart>()
+                .Where(x => x.UserId == userId)
                 .Single();
 
-            if (existingCartItem == null)
-                return NotFound(new { Message = "Cart item not found" });
+            if (cart == null)
+                return NotFound(new { Message = "Cart not found" });
 
-            if (existingCartItem.UserId != userId)
-                return Unauthorized(new { Message = "You are not authorized to remove this cart item" });
+            var items = JsonSerializer.Deserialize<List<CartItemSimple>>(cart.ItemsJson) ?? new List<CartItemSimple>();
 
-            await _supabaseClient.From<CartItem>()
-                .Where(x => x.Id == id)
-                .Delete();
+            var item = items.FirstOrDefault(i => i.ProductId == productId);
+            if (item == null)
+                return NotFound(new { Message = "Item not found in cart" });
+
+            items.Remove(item);
+            cart.ItemsJson = JsonSerializer.Serialize(items);
+            await _supabaseClient.From<Cart>().Update(cart);
 
             return Ok(new { Message = "Cart item removed successfully" });
         }
@@ -177,36 +196,36 @@ public class CartManagementController : ControllerBase
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized("User ID is missing in the JWT token");
 
-            var userEmail = User.FindFirst("email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(userEmail))
-                return Unauthorized("Email claim is missing in the JWT token");
-
-            var cartItems = await _supabaseClient.From<CartItem>()
+            var cart = await _supabaseClient.From<Cart>()
                 .Where(x => x.UserId == userId)
-                .Order(x => x.AddedAt, Supabase.Postgrest.Constants.Ordering.Descending)
-                .Get();
+                .Single();
 
-            var cartItemDtos = cartItems.Models.Select(c => new CartItemDto
+            if (cart == null || string.IsNullOrEmpty(cart.ItemsJson) || cart.ItemsJson == "[]")
             {
-                Id = c.Id,
-                ProductId = c.ProductId,
-                ProductName = c.ProductName,
-                Description = c.Description,
-                ImageBase64 = c.ImageBase64,
-                Price = c.Price,
-                Quantity = c.Quantity,
-                UserEmail = c.UserEmail,
-                AddedAt = c.AddedAt,
-                TotalPrice = c.Quantity * c.Price
-            }).ToList();
+                return Ok(new { CartItems = new List<CartItemResponseDto>() });
+            }
 
-            var totalCartAmount = cartItemDtos.Sum(item => item.TotalPrice);
+            var cartItems = JsonSerializer.Deserialize<List<CartItemSimple>>(cart.ItemsJson)!;
 
-            return Ok(new
+            var responseItems = new List<CartItemResponseDto>();
+
+            foreach (var item in cartItems)
             {
-                CartItems = cartItemDtos,
-                TotalCartAmount = totalCartAmount
-            });
+                var product = await GetProductById(item.ProductId);
+                if (product != null)
+                {
+                    responseItems.Add(new CartItemResponseDto
+                    {
+                        ProductId = product.Id,
+                        ProductName = product.ProductName,
+                        Price = product.Price,
+                        ImageBase64 = product.ImageBase64,
+                        Quantity = item.Quantity
+                    });
+                }
+            }
+
+            return Ok(new { CartItems = responseItems });
         }
         catch (Exception ex)
         {

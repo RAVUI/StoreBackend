@@ -31,26 +31,44 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var response = await _supabaseClient.Auth.SignUp(dto.Email, dto.Password);
+            var signUpOptions = new Supabase.Gotrue.SignUpOptions
+            {
+                Data = new Dictionary<string, object>
+            {
+                { "name", dto.Name } // 👈 THIS sets display_name internally
+            }
+            };
+
+            var response = await _supabaseClient.Auth.SignUp(
+                Supabase.Gotrue.Constants.SignUpType.Email, 
+                dto.Email,
+                dto.Password,
+                signUpOptions
+            );
+
             if (response.User == null)
                 return BadRequest(new { Message = "Registration failed" });
 
+            // Your existing table insert (trigger or manual – both fine)
             var userRole = new UserRole
             {
                 Id = Guid.Parse(response.User.Id),
+                Name = dto.Name,
                 Email = dto.Email,
-                Role = "Admin",
+                Role = "user",
                 CreatedAt = DateTime.UtcNow
             };
 
             await _supabaseClient.From<UserRole>().Insert(userRole);
-            return Ok(new { Token = response.AccessToken }); // Use Supabase-generated JWT token
+
+            return Ok(new { Token = response.AccessToken });
         }
         catch (Exception ex)
         {
             return BadRequest(new { Message = ex.Message });
         }
     }
+
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -100,6 +118,7 @@ public class AuthController : ControllerBase
             return Ok(new UserDto
             {
                 Id = parsedUserId,
+                Name = userRole?.Name ?? string.Empty,
                 Email = userEmail,
                 Role = userRole?.Role ?? "user"
             });
