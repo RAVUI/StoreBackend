@@ -128,9 +128,12 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowBlazor", policy =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("https://localhost:7041") // your frontend URL
+        policy.WithOrigins(
+                "https://localhost:7041",
+                "http://localhost:4200"
+              )
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -144,7 +147,7 @@ var app = builder.Build();
     app.UseSwaggerUI();
 
 
-app.UseCors("AllowBlazor");   
+app.UseCors("AllowFrontend");   
 
 app.UseHttpsRedirection();
 

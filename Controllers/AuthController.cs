@@ -158,6 +158,47 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpGet("Getuser")]
+    [Authorize]
+    public async Task<IActionResult> GetCurrentUser()
+    {
+        try
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "User ID missing in token" });
+
+            if (!Guid.TryParse(userId, out Guid parsedUserId))
+                return BadRequest(new { Message = "Invalid User ID" });
+
+            var user = await _supabaseClient
+                .From<UserRole>()
+                .Where(x => x.Id == parsedUserId)
+                .Single();
+
+            if (user == null)
+                return NotFound(new { Message = "User not found" });
+
+            return Ok(new
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Email = user.Email,
+                Role = user.Role
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new
+            {
+                Message = ex.Message
+            });
+        }
+    }
+
+
     [HttpPut("updaterole")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateRole([FromBody] UpdateRoleDto dto)
